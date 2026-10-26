@@ -1,31 +1,68 @@
 'use client'
 
+import { useSession } from '@/lib/store'
+import { MarketingShell } from '@/components/marketing/marketing-shell'
+import { LandingHome } from '@/components/landing'
+import { SessionKeeper } from '@/components/shared/session-keeper'
+import { KumiChat } from '@/components/ai/kumi-chat'
+import { CustomerApp } from '@/components/customer/customer-app'
+import { DriverApp } from '@/components/driver/driver-app'
+import { AdminApp } from '@/components/admin/admin-app'
+import { AppSplash } from '@/components/shared/app-splash'
+
+/**
+ * Home route. Signed-in users in an app view get their app surface; everyone
+ * else gets the marketing home. Deep marketing topics live on their own
+ * routes (/how-it-works, /plans, /drivers, /city, /faq, /legal) rendered by
+ * the shared MarketingShell.
+ */
 export default function Home() {
-  return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      gap: '2rem',
-      padding: '1rem'
-    }}>
-      <div style={{
-        position: 'relative',
-        width: '6rem',
-        height: '6rem'
-      }}>
-        <img
-          src="/logo.svg"
-          alt="Z.ai Logo"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain'
-          }}
+  const { session, view, hydrating } = useSession()
+
+  if (hydrating) return <AppSplash />
+
+  if (session && view === 'customer') {
+    return (
+      <>
+        <CustomerApp
+          profile={session.profile}
+          onExit={() => useSession.getState().setView('landing')}
         />
-      </div>
-    </div>
+        <SessionKeeper />
+        <KumiChat authed />
+      </>
+    )
+  }
+
+  if (session && view === 'driver') {
+    return (
+      <>
+        <DriverApp
+          profile={session.profile}
+          onExit={() => useSession.getState().setView('landing')}
+        />
+        <SessionKeeper />
+        <KumiChat authed />
+      </>
+    )
+  }
+
+  if (session && view === 'admin') {
+    return (
+      <>
+        <AdminApp
+          profile={session.profile}
+          onExit={() => useSession.getState().setView('landing')}
+        />
+        <SessionKeeper />
+        <KumiChat authed />
+      </>
+    )
+  }
+
+  return (
+    <MarketingShell>
+      <LandingHome />
+    </MarketingShell>
   )
 }

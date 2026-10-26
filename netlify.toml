@@ -1,0 +1,30 @@
+# KumBola — Netlify deployment configuration
+# Next.js 16 App Router on Netlify via the official runtime.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(self)"
+
+# Note: set the following environment variables in the Netlify UI
+# (Site settings → Environment variables):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY   (sb_publishable_…)
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY          (legacy anon JWT)
+#   SUPABASE_SERVICE_ROLE_KEY              (legacy service_role JWT — server only)
+#   SUPABASE_SECRET_KEY                    (sb_secret_… — server only)
+#   SUPABASE_JWKS_URL

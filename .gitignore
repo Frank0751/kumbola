@@ -52,3 +52,13 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# local runtime artifacts (sandbox / databases / process state)
+/db/
+/.zscripts/
+/.initial_snapshot.json
+/download/
+/upload/
+
+# allow the env template
+!.env.example
