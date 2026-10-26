@@ -116,3 +116,22 @@ Stage Summary:
 - KumBola is consistently framed as an independent KoomBei × WasteCure platform with KMA as one of several MoU partners across UI copy, FAQ, AI prompt, demo data and DB.
 - Hero uses the user-supplied Cloudinary image (public/images/hero-tricycle.jpg).
 - Known minor tradeoff: if a user signs out while on a sub-page and signs in again on that same sub-page, they stay there (nav shows "Open app") instead of bouncing to /.
+
+---
+Task ID: 5
+Agent: Z.ai Code (orchestrator)
+Task: Recover app after sandbox reset + connect GitHub repo (Frank0751/kumbola)
+
+Work Log:
+- Discovered KumBola source files were wiped from /home/z/my-project (sandbox reset); only scaffold remained, dev server had been serving stale in-memory pages.
+- Found complete project backup at /tmp/my-project (100 src files, full .env, public/images incl. user's Cloudinary hero + verify site photos).
+- rsync-restored src/, public/, .env, package.json, supabase/, prisma/, netlify.toml, worklog, README into /home/z/my-project (excluded node_modules/.next/.git/.zscripts/db/upload).
+- bun install (added @supabase/supabase-js, pg, @types/pg); restarted dev server via setsid + .zscripts/dev.sh (plain nohup/setsid spawns get reaped between tool calls).
+- Verified: all 7 routes 200, hero image 200 (3.2MB), auth API issues Supabase sessions, /api/ai/chat answers with KMA-as-partner framing, /api/data serves plans.
+- Git hardening: untracked .env (was committed in scaffold!), db/custom.db, .zscripts/*; added /db/, /.zscripts/, /.initial_snapshot.json, /download/, /upload/ to .gitignore + !.env.example; created .env.example template with placeholders.
+- Set repo-local git identity Frank0751 <Frank0751@users.noreply.github.com>; committed 142 files (68d58b7) "KumBola: full production app…"; added remote origin https://github.com/Frank0751/kumbola.git.
+- Push blocked: needs GitHub Personal Access Token (no gh CLI / SSH / stored credentials in sandbox).
+
+Stage Summary:
+- App fully restored & verified; commit 68d58b7 ready on main; origin configured.
+- BLOCKED on: user PAT (repo scope) to run `git push -u origin main`. Once pushed, Netlify import can proceed.
