@@ -135,3 +135,18 @@ Work Log:
 Stage Summary:
 - App fully restored & verified; commit 68d58b7 ready on main; origin configured.
 - BLOCKED on: user PAT (repo scope) to run `git push -u origin main`. Once pushed, Netlify import can proceed.
+
+---
+Task ID: 6
+Agent: Z.ai Code (orchestrator)
+Task: Push KumBola to GitHub (Frank0751/kumbola) with user PAT
+
+Work Log:
+- Configured git credential store (chmod 600 ~/.git-credentials) with user-provided classic PAT (repo scope, 90d).
+- git push -u origin main → success; branch tracking main→origin/main established so future pushes need no extra flags.
+- Verified via ls-remote: remote HEAD = refs/heads/main = local 784fd8a (2 commits ahead of scaffold initial commit).
+
+Stage Summary:
+- Repo live at https://github.com/Frank0751/kumbola — contains full app, .env excluded, .env.example included.
+- All future changes: commit locally then `git push` (credentials cached).
+- Next: Netlify import & deploy (netlify.toml + .env.example ready for env var paste).
