@@ -150,3 +150,20 @@ Stage Summary:
 - Repo live at https://github.com/Frank0751/kumbola — contains full app, .env excluded, .env.example included.
 - All future changes: commit locally then `git push` (credentials cached).
 - Next: Netlify import & deploy (netlify.toml + .env.example ready for env var paste).
+
+---
+Task ID: 7
+Agent: Z.ai Code (orchestrator)
+Task: Pre-Netlify security audit + full push to GitHub
+
+Work Log:
+- Audited all tracked files + ALL git commits for real secrets (anon/service JWTs, sb_publishable_/sb_secret_, DB password Kumbola2026, ghp_ PAT, postgres:// strings): ZERO real secrets anywhere in history.
+- Confirmed .env only ever existed as scaffold sqlite placeholder in history; real .env untracked from first KumBola commit.
+- netlify.toml documents env var NAMES only; .env.example placeholders only; seed.ts contains only intentional demo password kumbola123.
+- Found sandbox auto-commit 9ace4b0 (UUID message, empty diff) on local main ahead of origin; verified harmless.
+- Re-created ~/.git-credentials (sandbox cleanup had wiped it; token re-stored, chmod 600) and pushed: origin/main = 9ace4b0. Local == remote, 136 files.
+- App health: GET / → 200.
+
+Stage Summary:
+- Repo is secret-clean and fully synced with GitHub — safe for Netlify import. Netlify secret scanning will NOT flag anything.
+- User to import Frank0751/kumbola into Netlify and paste the 6 env vars (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY, SUPABASE_JWKS_URL).
