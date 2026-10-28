@@ -167,3 +167,17 @@ Work Log:
 Stage Summary:
 - Repo is secret-clean and fully synced with GitHub — safe for Netlify import. Netlify secret scanning will NOT flag anything.
 - User to import Frank0751/kumbola into Netlify and paste the 6 env vars (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY, SUPABASE_JWKS_URL).
+
+---
+Task ID: 8
+Agent: Z.ai Code (orchestrator)
+Task: Fix Netlify secrets-scanner build failures
+
+Work Log:
+- First deploy failed: secrets scanner flagged SUPABASE_ANON_KEY + NEXT_PUBLIC_SUPABASE_URL values inlined in build output (user had marked ALL 7 env vars secret). Public-by-design values legitimately compile into the bundle.
+- Documented correct secret/non-secret split in netlify.toml comments (commit 61f8f27).
+- Deploys at 61f8f27 still failed (flags not yet changed in UI) → added SECRETS_SCAN_OMIT_KEYS in netlify.toml [build.environment] omitting the 5 public keys (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_ANON_KEY, SUPABASE_JWKS_URL) so build passes regardless of UI toggle state; master keys remain scanned/protected (a72d371).
+- Push triggered a fresh production deploy automatically.
+
+Stage Summary:
+- Build should now pass with either UI state; if it fails again, next diagnostic step is reading the deploy log's secrets section.
