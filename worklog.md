@@ -181,3 +181,22 @@ Work Log:
 
 Stage Summary:
 - Build should now pass with either UI state; if it fails again, next diagnostic step is reading the deploy log's secrets section.
+
+---
+Task ID: 10
+Agent: Z.ai Code (orchestrator)
+Task: One account, two modes — customer <-> operator role switching
+
+Work Log:
+- Design: single active role (profiles.role) + preserved operator fields; all data user-keyed so switches lose nothing; zero DB migration needed. Admins excluded.
+- New POST /api/roles (verifyUser auth, 403 for admin, plate required for driver target, notifications on switch).
+- New RoleSwitchDialog (form path for first-time, one-tap returning path when vehicle_plate exists).
+- AppHeader: switch menu items + applySwitchedProfile via setSession (roleView flips surface in place).
+- MarketingShell: driver CTAs open the dialog for signed-in customers; on success setSession + router.push('/').
+- Kumi SYSTEM_PROMPT: one-account/two-modes paragraph.
+- Mid-test incident: sandbox reset wiped .env AGAIN (3rd time); restored from /tmp/my-project/.env (auth 500s in dev.log are from that window).
+- E2E (agent-browser): demo customer -> operator (AS 8899-24) -> Operator app live data; -> customer (wallet GHS 120 intact, plate kept); -> operator one-tap "Welcome back, operator!"; /drivers CTA opens dialog; admin menu has no switch items. POST /api/roles 200 x3; guards work.
+- lint 0 problems, tsc src 0 errors.
+
+Stage Summary:
+- Feature complete and verified. Push to GitHub → Netlify auto-deploy.
