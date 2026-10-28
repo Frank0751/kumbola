@@ -96,7 +96,7 @@ export function AppHeader({
       })
       if (res.profile) {
         applySwitchedProfile(res.profile)
-        toast.success('Customer mode on 🏠 — your operator history is saved.')
+        toast.success('Customer mode on — your operator history is saved.')
       } else {
         toast.error(res.error ?? 'Could not switch modes')
       }

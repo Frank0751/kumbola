@@ -80,7 +80,7 @@ export function CustomerApp({
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="font-display text-2xl font-bold sm:text-3xl">
-              Medaase, {profile.full_name.split(' ')[0]} 👋
+              Medaase, {profile.full_name.split(' ')[0]}
             </h1>
             <p className="text-sm text-muted-foreground">
               {profile.account_type ? profile.account_type[0].toUpperCase() + profile.account_type.slice(1) : 'Household'} · {profile.municipality ?? 'Greater Kumasi'}

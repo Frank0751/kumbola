@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 
     await admin.from('notifications').insert({
       user_id: auth.userId,
-      title: 'Operator mode unlocked 🛺',
+      title: 'Operator mode unlocked',
       body: 'Your account can now accept pickups. Go online from the operator app to start earning — your customer bookings and wallet are safe and waiting.',
       kind: 'success',
     })
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
 
   await admin.from('notifications').insert({
     user_id: auth.userId,
-    title: 'Customer mode on 🏠',
+    title: 'Customer mode on',
     body: 'Welcome back to booking mode. Your operator history and earnings are saved — switch back anytime from the account menu.',
     kind: 'info',
   })

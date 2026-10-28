@@ -55,8 +55,8 @@ const SUGGESTIONS: readonly string[] = [
 
 function greeting(authed: boolean): ChatMessage {
   const intro = authed
-    ? "Welcome back! I'm **Kumi**, your KumBola guide. 🌿"
-    : "Hi there! I'm **Kumi**, your KumBola guide. 🌿"
+    ? "Welcome back! I'm **Kumi**, your KumBola guide."
+    : "Hi there! I'm **Kumi**, your KumBola guide."
   const outro = authed
     ? 'What would you like to know?'
     : 'Sign in to book — but feel free to ask me anything. What\u2019s on your mind?'

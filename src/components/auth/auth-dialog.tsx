@@ -107,7 +107,7 @@ export function AuthDialog({
       })
       useSession.getState().setSession(res.session)
       onOpenChange(false)
-      toast.success('Akwaaba! Your KumBola account is ready 🎉')
+      toast.success('Akwaaba! Your KumBola account is ready.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign up failed')
     } finally {

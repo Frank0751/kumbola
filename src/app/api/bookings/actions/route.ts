@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
     await admin.from('notifications').insert({
       user_id: bkRow.customer_id,
-      title: 'Operator assigned 🛺',
+      title: 'Operator assigned',
       body: `${auth.profile.full_name} (${auth.profile.vehicle_plate ?? 'Aboboyaa'}) is on the way for ${bkRow.reference}. Show pickup code ${bkRow.pickup_code} on arrival.`,
       kind: 'info',
     })
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 
     await admin.from('notifications').insert({
       user_id: bkRow.customer_id,
-      title: 'Waste collected ✅',
+      title: 'Waste collected',
       body: `Your load for ${bkRow.reference} is on its way to an approved site. You will get a disposal confirmation shortly.`,
       kind: 'info',
     })
@@ -178,13 +178,13 @@ export async function POST(req: Request) {
     await admin.from('notifications').insert([
       {
         user_id: bkRow.customer_id,
-        title: 'Disposal verified 🌍',
+        title: 'Disposal verified',
         body: `${Number(weightKg).toFixed(0)} kg from ${bkRow.reference} was verified at ${site.name}. Ticket ${ticket}. Thank you for keeping Kumasi clean!`,
         kind: 'success',
       },
       {
         user_id: auth.userId,
-        title: 'Payout sent 💸',
+        title: 'Payout sent',
         body: `GHS ${payout.toFixed(2)} (${bonus > 0 ? `incl. GHS ${bonus.toFixed(2)} recyclables bonus` : 'fare + 85% share'}) is on its way to your mobile money.`,
         kind: 'success',
       },

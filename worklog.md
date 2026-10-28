@@ -219,3 +219,19 @@ Work Log:
 
 Stage Summary:
 - Home is now two buttons and a menu, exactly like Bolt/Uber. Push to GitHub -> Netlify auto-deploy.
+
+---
+Task ID: 12
+Agent: Z.ai Code (orchestrator)
+Task: Fix vehicle plate input wiping + remove emojis from the interface
+
+Work Log:
+- Plate bug root cause: CustomerApp polls /api/me|bookings|wallet every 10s and passes a NEW { ...profile, rating: undefined } object to AppHeader -> RoleSwitchDialog useEffect([open, profile]) re-fired on every refresh and re-seeded plate/base from the (empty) profile, wiping user input mid-typing.
+- Fix (role-switch-dialog.tsx): seed fields only on the closed->open transition via wasOpen ref; background profile identity changes no longer touch form state. Also removed the emoji from its success toast.
+- Emoji removal (user: "take these emojis off the interface"): stripped from all API-generated notification titles (welcome, pickup requested, operator assigned, waste collected, disposal verified, payout sent, wallet topped up, plan activated, mode switches), toasts (signup, online/offline, customer mode), customer greeting "Medaase, Ama", Kumi chat welcome; added explicit "NEVER use emojis" rule to Kumi SYSTEM_PROMPT. Kept monochrome UI glyphs (rating star, step checks).
+- DB cleanup: one-off .zscripts/clean-notifications.ts (service role) stripped emojis from 29 existing notification rows so history matches the new style.
+- E2E (agent-browser): typed plate "AS 1111-26" + base "Kwabre East", touched next field, waited 24s+ through 2+ poll cycles -> values persisted; switch to operator succeeded; switched back to customer; notifications panel 100% emoji-free.
+- lint 0 problems.
+
+Stage Summary:
+- Plate input no longer self-clears; interface is emoji-free across notifications, toasts, greetings and AI chat. Push -> Netlify auto-deploy.

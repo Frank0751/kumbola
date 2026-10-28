@@ -129,7 +129,7 @@ export async function POST(req: Request) {
     }
     await admin.from('notifications').insert({
       user_id: userId,
-      title: 'Welcome to KumBola! 🎉',
+      title: 'Welcome to KumBola!',
       body:
         role === 'driver'
           ? 'Your operator account is ready. Finish onboarding with your association, then go online to receive jobs.'

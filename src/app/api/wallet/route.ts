@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     })
     await admin.from('notifications').insert({
       user_id: auth.userId,
-      title: 'Wallet topped up 💰',
+      title: 'Wallet topped up',
       body: `GHS ${amount.toFixed(2)} received via ${network}. Reference ${reference}.`,
       kind: 'success',
     })
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     })
     await admin.from('notifications').insert({
       user_id: auth.userId,
-      title: 'Plan activated ✅',
+      title: 'Plan activated',
       body: `${plan.name} is now active with ${credits} pickups. Credits appear automatically when you book.`,
       kind: 'success',
     })

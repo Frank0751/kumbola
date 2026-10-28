@@ -140,7 +140,7 @@ export async function POST(req: Request) {
   }
   await admin.from('notifications').insert({
     user_id: auth.userId,
-    title: 'Pickup requested 📦',
+    title: 'Pickup requested',
     body: `Booking ${booking.reference} is queued for dispatch. Your pickup code is ${booking.pickup_code} — show it to the operator when they arrive.`,
     kind: 'info',
   })

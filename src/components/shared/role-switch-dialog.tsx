@@ -6,7 +6,7 @@
 // customer data. If the profile already has a vehicle plate from a previous
 // operator stint, switching is a single tap.
 // ============================================================
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BadgeCheck, Coins, Loader2, Truck, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,12 +54,17 @@ export function RoleSwitchDialog({
   const [base, setBase] = useState('')
   const [busy, setBusy] = useState(false)
 
+  // Seed the fields once, when the dialog opens. The apps pass a fresh
+  // profile object on every background refresh (10s polling), so depending
+  // on `profile` identity here would wipe whatever the user is typing.
+  const wasOpen = useRef(false)
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setPlate(profile.vehicle_plate ?? '')
       setVehicleType(profile.vehicle_type ?? VEHICLE_TYPES[0])
       setBase(profile.base_municipality ?? profile.municipality ?? '')
     }
+    wasOpen.current = open
   }, [open, profile])
 
   async function switchToOperator() {
@@ -80,7 +85,7 @@ export function RoleSwitchDialog({
       })
       if (res.profile) {
         onSwitched(res.profile)
-        toast.success('Operator mode unlocked 🛺 — go online to start earning!')
+        toast.success('Operator mode unlocked — go online to start earning!')
         onOpenChange(false)
       } else {
         toast.error(res.error ?? 'Could not switch modes')

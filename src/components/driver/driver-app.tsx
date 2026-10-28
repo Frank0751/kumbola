@@ -60,7 +60,7 @@ export function DriverApp({
     try {
       await api('/api/driver', { method: 'POST', body: JSON.stringify({ online: v }) })
       setOnline(v)
-      toast.success(v ? 'You are online — jobs incoming 🛺' : 'You are offline. Rest well!')
+      toast.success(v ? 'You are online — jobs incoming' : 'You are offline. Rest well!')
       load()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not change status')
@@ -449,7 +449,7 @@ function VerifyStep({ booking: b, onDone }: { booking: Booking; onDone: () => vo
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-xl bg-emerald-50 p-6 text-center dark:bg-emerald-950/30">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white"><ShieldCheck className="h-7 w-7" /></span>
-        <p className="font-display text-lg font-bold text-emerald-700 dark:text-emerald-400">Disposal verified 🌍</p>
+        <p className="font-display text-lg font-bold text-emerald-700 dark:text-emerald-400">Disposal verified</p>
         <p className="text-sm text-muted-foreground">Geofence ✓ · Photo ✓ · Site ticket ✓</p>
       </div>
     )
