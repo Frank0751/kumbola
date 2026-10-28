@@ -8,6 +8,12 @@
 [build.environment]
   NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
+  # Public-by-design values that legitimately appear in the compiled bundle.
+  # Excluding them from secrets scanning lets the build pass while the two
+  # server-only master keys (SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SECRET_KEY)
+  # remain fully protected — if THOSE ever leak into build output, the
+  # scanner still fails the build.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_ANON_KEY,SUPABASE_JWKS_URL"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
