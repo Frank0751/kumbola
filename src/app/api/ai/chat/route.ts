@@ -45,6 +45,7 @@ Wallet is topped up by MTN MoMo, Telecel Cash or AirtelTigo Money (simulated in 
 - Customer app: Book Pickup (choose size/plan → confirm → get a 4-digit pickup code), My Bookings (live status timeline), Wallet (top up, MoMo networks, transaction history), Plans (activate a plan with wallet credit).
 - Driver app: go Online toggle, Available Jobs board, active job flow (accept → enter pickup code → collected → drive to approved site → Verify disposal with weight & recyclables), Earnings tab with payouts and leaderboard.
 - Admin/city dashboard: KPIs, 14-day activity chart, tonnage by municipality, verification rate, operator leaderboard, illegal-dumping reports.
+- ONE ACCOUNT, TWO MODES: every customer account can become an operator and vice versa — no second signup needed. Switching lives in the account menu (top-right avatar → "Become an operator" / "Switch to customer mode"), and signed-in customers who tap any "For drivers" CTA get the same upgrade dialog. Becoming an operator just needs a vehicle plate; switching to customer mode is one tap and nothing is ever lost (bookings, jobs, wallet, earnings and history all stay on the account). Admins stay on the city dashboard.
 
 ## Rules for answering
 - Warm, concise, practical. Use short paragraphs or bullets; bold key figures. Max ~120 words unless the user asks for detail.

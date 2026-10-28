@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useSession, roleView } from '@/lib/store'
 import { SessionKeeper } from '@/components/shared/session-keeper'
 import { AuthDialog } from '@/components/auth/auth-dialog'
+import { RoleSwitchDialog } from '@/components/shared/role-switch-dialog'
 import { KumiChat } from '@/components/ai/kumi-chat'
 import { SiteNav } from '@/components/landing/nav'
 import { SiteFooter } from '@/components/landing/footer'
@@ -58,6 +59,7 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
   const [authRole, setAuthRole] = useState<'customer' | 'driver'>('customer')
+  const [switchOpen, setSwitchOpen] = useState(false)
 
   // Track null → session transitions so a fresh sign-in lands in the app.
   // A session restored from localStorage on page load is NOT fresh, so the
@@ -84,6 +86,12 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
 
   const onGetStarted: MarketingCta['onGetStarted'] = (role = 'customer') => {
     if (session) {
+      // A signed-in customer tapping a driver CTA gets the one-account
+      // upgrade flow instead of being dropped back into customer mode.
+      if (role === 'driver' && session.profile.role === 'customer') {
+        setSwitchOpen(true)
+        return
+      }
       enterApp()
       return
     }
@@ -115,6 +123,17 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
         initialMode={authMode}
         initialRole={authRole}
       />
+      {session && session.profile.role === 'customer' && (
+        <RoleSwitchDialog
+          open={switchOpen}
+          onOpenChange={setSwitchOpen}
+          profile={session.profile}
+          onSwitched={(profile) => {
+            useSession.getState().setSession({ ...session, profile })
+            router.push('/')
+          }}
+        />
+      )}
       <KumiChat authed={!!session} />
     </CtaContext.Provider>
   )

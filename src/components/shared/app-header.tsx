@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, ChevronDown, Globe, LogOut, Loader2 } from 'lucide-react'
+import { Bell, ChevronDown, Globe, LogOut, Loader2, Repeat, Truck, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -14,10 +14,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { LogoMark } from '@/components/brand/logo'
+import { RoleSwitchDialog } from '@/components/shared/role-switch-dialog'
 import { api } from '@/lib/api-client'
 import { useSession } from '@/lib/store'
 import { initials, timeAgo } from '@/lib/format'
-import type { MePayload } from '@/lib/types'
+import { toast } from 'sonner'
+import type { MePayload, Profile } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const KIND_DOT: Record<string, string> = {
@@ -32,7 +34,13 @@ export function AppHeader({
   onExit,
   accent,
 }: {
-  profile: { full_name: string; role: string; rating?: number }
+  profile: {
+    full_name: string
+    role: string
+    rating?: number
+    vehicle_plate?: string | null
+    municipality?: string | null
+  }
   onExit: () => void
   accent?: string
 }) {
@@ -40,6 +48,8 @@ export function AppHeader({
   const [notifications, setNotifications] = useState<MePayload['notifications']>([])
   const [unread, setUnread] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [switchOpen, setSwitchOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const load = () => {
@@ -67,6 +77,33 @@ export function AppHeader({
       setNotifications((ns) => ns.map((n) => ({ ...n, read: true })))
     } finally {
       setBusy(false)
+    }
+  }
+
+  /** Apply a fresh profile from a role switch: setSession flips the view
+   *  automatically via roleView(), so the app surface swaps in place. */
+  function applySwitchedProfile(next: Profile) {
+    const s = useSession.getState()
+    if (s.session) s.setSession({ ...s.session, profile: next })
+  }
+
+  async function switchToCustomer() {
+    setSwitching(true)
+    try {
+      const res = await api<{ profile?: Profile; error?: string }>('/api/roles', {
+        method: 'POST',
+        body: JSON.stringify({ role: 'customer' }),
+      })
+      if (res.profile) {
+        applySwitchedProfile(res.profile)
+        toast.success('Customer mode on 🏠 — your operator history is saved.')
+      } else {
+        toast.error(res.error ?? 'Could not switch modes')
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not switch modes')
+    } finally {
+      setSwitching(false)
     }
   }
 
@@ -153,6 +190,23 @@ export function AppHeader({
               </p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {profile.role === 'customer' && (
+              <DropdownMenuItem onClick={() => setSwitchOpen(true)}>
+                <Truck className="h-4 w-4" /> Become an operator
+              </DropdownMenuItem>
+            )}
+            {profile.role === 'driver' && (
+              <DropdownMenuItem disabled={switching} onClick={switchToCustomer}>
+                {switching ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}
+                Switch to customer mode
+              </DropdownMenuItem>
+            )}
+            {profile.role !== 'admin' && (
+              <DropdownMenuItem className="text-xs text-muted-foreground" disabled>
+                <Repeat className="h-4 w-4" /> One account — both modes
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onExit}>
               <Globe className="h-4 w-4" /> Back to website
             </DropdownMenuItem>
@@ -162,6 +216,15 @@ export function AppHeader({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {profile.role === 'customer' && (
+        <RoleSwitchDialog
+          open={switchOpen}
+          onOpenChange={setSwitchOpen}
+          profile={profile as Profile}
+          onSwitched={applySwitchedProfile}
+        />
+      )}
     </header>
   )
 }
