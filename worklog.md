@@ -200,3 +200,22 @@ Work Log:
 
 Stage Summary:
 - Feature complete and verified. Push to GitHub → Netlify auto-deploy.
+
+---
+Task ID: 11
+Agent: Z.ai Code (orchestrator)
+Task: Uber/Bolt-style minimal home — two actions up front, everything else in a sidebar
+
+Work Log:
+- User brief: "make the interface very simple just like bolt and uber. Less words then it takes you straight to book a pickup, and drive with kumbola. then the other information will be in the side bar."
+- landing/index.tsx: home reduced to a single full-screen Hero (PartnerBar, ProblemSection, ImpactStrip removed from home; sub-pages keep their own sections).
+- landing/hero.tsx: rewritten — min-h-[calc(100svh-4rem)], hero image full-bleed + forest scrim, location pill, 3-word headline, ONE tagline line, two big CTAs (Book a pickup / Drive with KumBola), USSD micro-line. PartnerBar export removed.
+- landing/nav.tsx: rewritten — logo + Sign in + Book a pickup (min-380px) + hamburger on ALL breakpoints (desktop link row removed). Sidebar Sheet (20rem): session card (name/role/Open app) or Sign in, Book a pickup, Drive with KumBola, divider, How it works / Plans & pricing / For drivers / For the city / FAQ, divider, Privacy & terms; contact footer (WhatsApp phone, email, USSD). All items close-then-navigate.
+- landing/footer.tsx: slimmed to one row (brand + 4 links + copyright); sticky-bottom via existing min-h-screen flex shell.
+- auth-dialog.tsx: fixed stale initial tab/role — useEffect resets tab/role when dialog opens, so "Drive with KumBola" now lands on Create account -> driver (was stuck on Sign in from first mount).
+- Reset demo account customer@kumbola.com role back to 'customer' via POST /api/roles (was left as 'driver' by Task 10 testing, which made the "Household customer" demo button land in the operator app).
+- E2E (agent-browser): 390px home + sidebar, sidebar nav to /how-it-works, Book a pickup -> Create account (customer), Drive with KumBola -> Create account (driver), signed-in sidebar card + Open app, desktop 1440px home/sidebar/footer, 320px zero horizontal overflow (scrollWidth 320 == clientWidth), console clean.
+- lint 0 problems.
+
+Stage Summary:
+- Home is now two buttons and a menu, exactly like Bolt/Uber. Push to GitHub -> Netlify auto-deploy.

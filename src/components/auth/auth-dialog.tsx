@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -38,6 +38,16 @@ export function AuthDialog({
   const [tab, setTab] = useState<'signin' | 'signup'>(initialMode)
   const [role, setRole] = useState<'customer' | 'driver'>(initialRole)
   const [busy, setBusy] = useState(false)
+
+  // Sync the tab/role the dialog was opened with (e.g. "Drive with KumBola"
+  // must land on Create account → driver). useState alone would keep the
+  // first-mount value forever because the dialog stays mounted in the shell.
+  useEffect(() => {
+    if (open) {
+      setTab(initialMode)
+      setRole(initialRole)
+    }
+  }, [open, initialMode, initialRole])
   const [demoBusy, setDemoBusy] = useState<string | null>(null)
 
   // shared

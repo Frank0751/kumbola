@@ -2,15 +2,29 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Menu } from 'lucide-react'
-import { Logo } from '@/components/brand/logo'
+import { useRouter } from 'next/navigation'
+import {
+  Bike,
+  Building2,
+  CircleHelp,
+  LogIn,
+  Mail,
+  MapPin,
+  Menu,
+  Phone,
+  Route,
+  ShieldCheck,
+  Truck,
+  Wallet,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { Logo, LogoMark } from '@/components/brand/logo'
 import { Button } from '@/components/ui/button'
 import { useMarketingCta } from '@/components/marketing/marketing-shell'
 import { useSession } from '@/lib/store'
+import { SUPPORT_EMAIL, SUPPORT_PHONE, USSD_CODE } from '@/lib/constants'
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -18,27 +32,63 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 
-export const NAV_LINKS = [
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/plans', label: 'Plans' },
-  { href: '/drivers', label: 'For drivers' },
-  { href: '/city', label: 'For the city' },
-  { href: '/faq', label: 'FAQ' },
-] as const
+const INFO_LINKS: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/how-it-works', label: 'How it works', icon: Route },
+  { href: '/plans', label: 'Plans & pricing', icon: Wallet },
+  { href: '/drivers', label: 'For drivers', icon: Truck },
+  { href: '/city', label: 'For the city', icon: Building2 },
+  { href: '/faq', label: 'FAQ', icon: CircleHelp },
+]
+
+const LEGAL_LINKS: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/legal', label: 'Privacy & terms', icon: ShieldCheck },
+]
+
+/** One tappable row inside the sidebar. */
+function SideItem({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: LucideIcon
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3.5 rounded-xl px-3 py-3 text-left text-[15px] font-medium transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-accent"
+    >
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <Icon className="size-[18px] text-primary" aria-hidden />
+      </span>
+      <span className="flex-1">{label}</span>
+    </button>
+  )
+}
+
+function SidebarDivider() {
+  return <hr className="my-3 border-border/70" aria-hidden />
+}
 
 export function SiteNav() {
   const { onSignIn, onGetStarted } = useMarketingCta()
   const session = useSession((s) => s.session)
-  const pathname = usePathname()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
 
-  const isActive = (href: string) => pathname === href
+  const close = () => setOpen(false)
+  const go = (href: string) => {
+    close()
+    router.push(href)
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <nav
         aria-label="Main"
-        className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6"
+        className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6"
       >
         <Link
           href="/"
@@ -48,25 +98,6 @@ export function SiteNav() {
           <Logo className="h-9 w-auto sm:h-10" />
         </Link>
 
-        {/* Desktop links */}
-        <ul className="hidden items-center gap-1 lg:flex">
-          {NAV_LINKS.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                aria-current={isActive(link.href) ? 'page' : undefined}
-                className={`inline-block rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  isActive(link.href)
-                    ? 'bg-accent/60 text-foreground'
-                    : 'text-foreground/80 hover:bg-accent/50 hover:text-foreground'
-                }`}
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -75,75 +106,137 @@ export function SiteNav() {
           >
             {session ? 'Open app' : 'Sign in'}
           </Button>
-          {/* Primary CTA — hidden below 380px so logo + hamburger fit at 320px;
-              the same CTA is the first button in the mobile menu. */}
+          {/* Straight-to-booking CTA. Hidden below 380px so logo + menu fit
+              at 320px; the same action is the first item in the sidebar. */}
           <Button
             onClick={() => onGetStarted('customer')}
-            className="hidden h-11 min-[380px]:inline-flex px-4"
+            className="hidden h-10 min-[380px]:inline-flex px-4"
           >
             Book a pickup
           </Button>
 
-          {/* Mobile menu */}
+          {/* Menu — the only navigation entry on every screen size */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="outline"
                 size="icon"
-                className="size-11 lg:hidden"
+                className="size-11"
                 aria-expanded={open}
-                aria-controls="mobile-menu"
+                aria-controls="site-menu"
               >
                 <Menu className="size-5" aria-hidden />
                 <span className="sr-only">Open menu</span>
               </Button>
             </SheetTrigger>
+
             <SheetContent
               side="right"
-              className="w-[19rem] gap-0 sm:max-w-[19rem]"
-              id="mobile-menu"
+              id="site-menu"
+              className="flex w-[20rem] flex-col gap-0 p-0 sm:max-w-[20rem]"
             >
-              <SheetHeader>
-                <SheetTitle className="font-display text-lg">KumBola</SheetTitle>
-                <SheetDescription>Kill trash — Greater Kumasi</SheetDescription>
+              <SheetHeader className="space-y-0 border-b p-5 text-left">
+                <SheetTitle asChild>
+                  <div className="flex items-center gap-2.5">
+                    <LogoMark className="h-9 w-9" />
+                    <span className="font-display text-lg font-bold">KumBola</span>
+                  </div>
+                </SheetTitle>
+                <SheetDescription className="mt-1.5">
+                  Kill trash — Greater Kumasi
+                </SheetDescription>
               </SheetHeader>
-              <nav aria-label="Mobile" className="flex flex-col gap-1 px-4">
-                {NAV_LINKS.map((link) => (
-                  <SheetClose asChild key={link.href}>
-                    <Link
-                      href={link.href}
-                      aria-current={isActive(link.href) ? 'page' : undefined}
-                      className={`rounded-lg px-3 py-3 text-base font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                        isActive(link.href)
-                          ? 'bg-accent/60 text-foreground'
-                          : 'text-foreground/85 hover:bg-accent/50 hover:text-foreground'
-                      }`}
+
+              <div className="flex-1 overflow-y-auto p-3">
+                {/* Account */}
+                {session ? (
+                  <div className="mx-1 mb-1 rounded-xl bg-accent/50 p-4">
+                    <p className="truncate font-display text-base font-semibold">
+                      {session.profile.full_name || 'Welcome'}
+                    </p>
+                    <p className="mt-0.5 text-xs capitalize text-muted-foreground">
+                      {session.profile.role} account
+                    </p>
+                    <Button
+                      className="mt-3 h-10 w-full"
+                      onClick={() => {
+                        close()
+                        onSignIn() // session exists → enters the app
+                      }}
                     >
-                      {link.label}
-                    </Link>
-                  </SheetClose>
-                ))}
-              </nav>
-              <div className="mt-auto flex flex-col gap-2 border-t p-4">
-                <Button
-                  className="h-11"
+                      Open app
+                    </Button>
+                  </div>
+                ) : (
+                  <SideItem
+                    icon={LogIn}
+                    label="Sign in"
+                    onClick={() => {
+                      close()
+                      onSignIn()
+                    }}
+                  />
+                )}
+
+                {/* Primary actions — straight to the two things that matter */}
+                <SideItem
+                  icon={MapPin}
+                  label="Book a pickup"
                   onClick={() => {
-                    setOpen(false)
+                    close()
                     onGetStarted('customer')
                   }}
-                >
-                  Book a pickup
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="h-11"
+                />
+                <SideItem
+                  icon={Bike}
+                  label="Drive with KumBola"
                   onClick={() => {
-                    setOpen(false)
-                    onSignIn()
+                    close()
+                    onGetStarted('driver')
                   }}
+                />
+
+                <SidebarDivider />
+
+                {/* Information */}
+                {INFO_LINKS.map((link) => (
+                  <SideItem
+                    key={link.href}
+                    icon={link.icon}
+                    label={link.label}
+                    onClick={() => go(link.href)}
+                  />
+                ))}
+
+                <SidebarDivider />
+
+                {LEGAL_LINKS.map((link) => (
+                  <SideItem
+                    key={link.href}
+                    icon={link.icon}
+                    label={link.label}
+                    onClick={() => go(link.href)}
+                  />
+                ))}
+              </div>
+
+              {/* Contact footer inside the menu */}
+              <div className="border-t p-4 text-xs leading-relaxed text-muted-foreground">
+                <a
+                  href={`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`}
+                  className="flex items-center gap-2 py-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {session ? 'Open app' : 'Sign in'}
-                </Button>
+                  <Phone className="size-3.5 shrink-0" aria-hidden />
+                  {SUPPORT_PHONE} (WhatsApp)
+                </a>
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className="flex items-center gap-2 py-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Mail className="size-3.5 shrink-0" aria-hidden />
+                  {SUPPORT_EMAIL}
+                </a>
+                <p className="py-1 tabular-nums">USSD {USSD_CODE}</p>
               </div>
             </SheetContent>
           </Sheet>
