@@ -21,10 +21,17 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=(self)"
 
 # Note: set the following environment variables in the Netlify UI
-# (Site settings → Environment variables):
+# (Site configuration → Environment variables).
+#
+# Mark as SECRET (toggle "Secret value" ON) — server-only master keys:
+#   SUPABASE_SERVICE_ROLE_KEY              (legacy service_role JWT)
+#   SUPABASE_SECRET_KEY                    (sb_secret_…)
+#
+# Keep NON-SECRET (toggle OFF) — public-by-design values that are
+# compiled into the app bundle; marking them secret fails the
+# Netlify secrets scanner:
 #   NEXT_PUBLIC_SUPABASE_URL
 #   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY   (sb_publishable_…)
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY          (legacy anon JWT)
-#   SUPABASE_SERVICE_ROLE_KEY              (legacy service_role JWT — server only)
-#   SUPABASE_SECRET_KEY                    (sb_secret_… — server only)
+#   SUPABASE_ANON_KEY                      (legacy anon JWT, server fallback)
 #   SUPABASE_JWKS_URL
