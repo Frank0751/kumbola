@@ -58,10 +58,9 @@ export function Hero() {
 
         <h1
           id="hero-heading"
-          className="mt-5 font-display text-4xl font-black leading-[1.05] tracking-tight text-balance sm:text-5xl md:text-6xl"
+          className="mt-5 font-display text-5xl font-black leading-none tracking-tight sm:text-6xl md:text-7xl"
         >
-          Kum Bola:{' '}
-          <span className="text-gold">kill trash.</span>
+          Kum<span className="text-gold">Bola</span>
         </h1>
 
         <p className="mt-4 max-w-md text-pretty text-base leading-relaxed text-cream/75 sm:text-lg">

@@ -19,7 +19,7 @@ export function SiteFooter() {
             <p className="font-display text-base font-bold text-cream">
               KumBola
             </p>
-            <p className="text-xs text-cream/60">Kill trash — Greater Kumasi</p>
+            <p className="text-xs text-cream/60">Waste pickup — Greater Kumasi</p>
           </div>
         </div>
 

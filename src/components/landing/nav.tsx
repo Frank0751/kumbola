@@ -143,7 +143,7 @@ export function SiteNav() {
                   </div>
                 </SheetTitle>
                 <SheetDescription className="mt-1.5">
-                  Kill trash — Greater Kumasi
+                  Waste pickup — Greater Kumasi
                 </SheetDescription>
               </SheetHeader>
 

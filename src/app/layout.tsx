@@ -16,7 +16,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "KumBola — Kum Bola: kill trash",
+  title: "KumBola",
   description:
     "Ride-hailing for waste: KumBola coordinates vetted Aboboyaa tricycle operators for reliable, verified waste collection in Greater Kumasi. Book a pickup, track it, and get proof your waste reached an approved site.",
   keywords: [
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "KoomBei Digital Limited" }],
   openGraph: {
-    title: "KumBola — Kum Bola: kill trash",
+    title: "KumBola",
     description:
       "Book a vetted Aboboyaa operator, pay by mobile money, and get GPS-verified proof your waste reached an approved disposal site.",
     siteName: "KumBola",

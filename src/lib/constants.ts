@@ -4,7 +4,7 @@
 // ============================================================
 
 export const APP_NAME = 'KumBola'
-export const APP_TAGLINE = 'Kum Bola — kill trash'
+export const APP_TAGLINE = 'KumBola'
 export const SUPPORT_EMAIL = 'hello@kumbola.com'
 export const SUPPORT_PHONE = '+233 55 000 0000'
 export const USSD_CODE = '*920*88#'

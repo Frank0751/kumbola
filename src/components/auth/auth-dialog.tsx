@@ -142,7 +142,7 @@ export function AuthDialog({
           <DialogDescription>
             {tab === 'signin'
               ? 'Sign in to book pickups, drive, or manage the city dashboard.'
-              : 'Kum Bola: kill trash. Reliable collection, verified disposal, fair pay.'}
+              : 'Reliable collection, verified disposal, fair pay — Greater Kumasi.'}
           </DialogDescription>
         </DialogHeader>
 
