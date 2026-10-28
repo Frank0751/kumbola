@@ -43,8 +43,8 @@ export function DriversSection() {
       <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10">
         {/* Copy + benefits */}
         <Reveal>
-          <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-gold">
+          <div className="text-center">
+            <p className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-gold">
               <span aria-hidden className="size-1.5 rounded-full bg-gold" />
               For operators
             </p>
@@ -54,7 +54,7 @@ export function DriversSection() {
             >
               Own a tricycle? Turn trips into a proper living.
             </h2>
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-cream/80 sm:text-lg">
+            <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-relaxed text-cream/80 sm:text-lg">
               Kumasi’s Aboboyaa operators keep 85% of every fare, are paid by
               mobile money the same day, and earn a bonus for every kilogram of
               clean recyclables. Platform-only benefits exist because we studied
@@ -63,11 +63,14 @@ export function DriversSection() {
 
             <ul className="mt-8 grid gap-4 sm:grid-cols-2">
               {DRIVER_BENEFITS.map((benefit) => (
-                <li key={benefit.text} className="flex items-start gap-3">
+                <li
+                  key={benefit.text}
+                  className="flex flex-col items-center gap-2.5 text-center"
+                >
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cream/10 text-gold">
                     <benefit.icon className="size-5" aria-hidden />
                   </span>
-                  <span className="pt-1 text-sm leading-snug text-cream/85">
+                  <span className="text-pretty text-sm leading-snug text-cream/85">
                     {benefit.text}
                   </span>
                 </li>
@@ -78,11 +81,11 @@ export function DriversSection() {
 
         {/* Earnings card */}
         <Reveal delay={0.15}>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur sm:p-8">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center shadow-2xl backdrop-blur sm:p-8">
             <p className="text-sm font-medium text-cream/70">
               Typical monthly net earnings
             </p>
-            <p className="mt-1 font-display text-4xl font-bold tracking-tight tabular-nums text-gold sm:text-5xl">
+            <p className="mt-1 font-display text-2xl font-bold tracking-tight tabular-nums text-gold min-[380px]:text-3xl sm:text-4xl lg:text-5xl">
               GHS 2,296–3,296
             </p>
 
@@ -169,9 +172,9 @@ function CityDashboardMock() {
         ].map((tile) => (
           <div
             key={tile.label}
-            className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10"
+            className="min-w-0 rounded-xl bg-white/5 p-3 ring-1 ring-white/10"
           >
-            <p className="font-display text-lg font-bold tabular-nums text-gold sm:text-xl">
+            <p className="font-display text-base font-bold tabular-nums text-gold sm:text-xl">
               {tile.value}
             </p>
             <p className="mt-0.5 text-[11px] leading-tight text-cream/60">
@@ -247,8 +250,8 @@ export function CitySection() {
     >
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-10">
         <Reveal>
-          <div>
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
+          <div className="text-center">
+            <p className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
               <span aria-hidden className="size-1.5 rounded-full bg-gold" />
               For the city
             </p>
@@ -258,20 +261,20 @@ export function CitySection() {
             >
               Every cedi proves where waste went
             </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+            <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
               KumBola is not just a convenience app. Geofenced GPS arrival, a
               timestamped unload photo and the site ticket close every job.
               Random audits and GPS-spoofing checks deter fraud. Assemblies get a
               free live dashboard: collection heatmaps, tonnages by area,
               disposal-site usage and geotagged illegal-dumping reports.
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground">
               We work with KMA and the Suame, Kwabre East and Oforikrom
               assemblies as MoU partners — and the platform is built to serve
               any municipality that comes on board.
             </p>
 
-            <ul className="mt-7 flex flex-wrap gap-2.5">
+            <ul className="mt-7 flex flex-wrap justify-center gap-2.5">
               {CITY_CHIPS.map((chip) => (
                 <li
                   key={chip.label}
@@ -311,10 +314,10 @@ export function ImpactStrip() {
   return (
     <section aria-label="36-month impact targets" className="bg-accent text-accent-foreground">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 md:py-14">
-        <ul className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+        <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-5">
           {IMPACT_STATS.map((stat) => (
-            <li key={stat.label} className="text-center">
-              <p className="font-display text-3xl font-bold tracking-tight tabular-nums md:text-4xl">
+            <li key={stat.label} className="min-w-0 text-center">
+              <p className="font-display text-2xl font-bold tracking-tight tabular-nums sm:text-3xl md:text-4xl">
                 {stat.value}
               </p>
               <p className="mt-1 text-sm font-medium opacity-80">{stat.label}</p>

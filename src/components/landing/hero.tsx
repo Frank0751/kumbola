@@ -40,8 +40,8 @@ export function Hero() {
       <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 md:py-24 lg:grid-cols-2 lg:gap-10">
         {/* Copy */}
         <Reveal>
-          <div className="flex flex-col items-start gap-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-gold sm:text-sm">
+          <div className="flex flex-col items-center gap-6 text-center">
+            <span className="inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-gold/30 bg-gold/10 px-3.5 py-1.5 text-center text-xs font-semibold tracking-wide text-gold sm:text-sm">
               <MapPin className="size-3.5" aria-hidden />
               Greater Kumasi · Suame · Kwabre East · Oforikrom
             </span>
@@ -54,7 +54,7 @@ export function Hero() {
               <span className="text-gold">kill trash.</span>
             </h1>
 
-            <p className="max-w-xl text-base leading-relaxed text-cream/80 sm:text-lg">
+            <p className="mx-auto max-w-xl text-pretty text-base leading-relaxed text-cream/80 sm:text-lg">
               Waste collection that works like ride-hailing. Book a vetted
               Aboboyaa operator, pay by mobile money, and get GPS-verified proof
               your waste reached an approved site.
@@ -78,7 +78,7 @@ export function Hero() {
               </Button>
             </div>
 
-            <ul className="flex flex-wrap gap-x-5 gap-y-2 pt-1 text-sm text-cream/75">
+            <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 pt-1 text-sm text-cream/75">
               {TRUST_CHIPS.map((chip) => (
                 <li key={chip.label} className="inline-flex items-center gap-1.5">
                   <chip.icon className="size-4 shrink-0 text-gold" aria-hidden />
@@ -108,7 +108,7 @@ export function Hero() {
               aria-hidden
               animate={floatA}
               transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6"
+              className="absolute bottom-4 left-4 hidden sm:bottom-6 sm:left-6 sm:block"
             >
               <div className="rounded-2xl bg-card/95 p-4 shadow-xl ring-1 ring-black/5 backdrop-blur">
                 <p className="font-display text-2xl font-bold tabular-nums text-primary sm:text-3xl">
@@ -125,7 +125,7 @@ export function Hero() {
               aria-hidden
               animate={floatB}
               transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute right-4 top-4 sm:right-6 sm:top-6"
+              className="absolute right-4 top-4 hidden sm:right-6 sm:top-6 sm:block"
             >
               <div className="flex items-center gap-2.5 rounded-2xl bg-card/95 p-3 shadow-xl ring-1 ring-black/5 backdrop-blur">
                 <span className="flex size-9 items-center justify-center rounded-full bg-primary/10">

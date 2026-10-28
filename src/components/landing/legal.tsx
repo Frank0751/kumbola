@@ -67,11 +67,11 @@ export function LegalContent() {
             >
               <h2
                 id={`${section.id}-title`}
-                className="font-display text-xl font-bold sm:text-2xl"
+                className="text-balance text-center font-display text-xl font-bold sm:text-2xl"
               >
                 {section.title}
               </h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
                 {section.intro}
               </p>
               <ul className="mt-5 space-y-3">
@@ -84,7 +84,7 @@ export function LegalContent() {
                       aria-hidden
                       className="mt-2 size-1.5 shrink-0 rounded-full bg-gold"
                     />
-                    <span>{point}</span>
+                    <span className="text-pretty">{point}</span>
                   </li>
                 ))}
               </ul>

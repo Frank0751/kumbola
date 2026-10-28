@@ -47,15 +47,15 @@ export function ProblemSection() {
       className="scroll-mt-20 bg-background py-16 md:py-24"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <Reveal className="max-w-3xl">
-          <Eyebrow>The problem</Eyebrow>
+        <Reveal className="mx-auto max-w-3xl text-center">
+          <Eyebrow center>The problem</Eyebrow>
           <h2
             id="problem-title"
             className="mt-3 font-display text-3xl font-bold tracking-tight text-balance sm:text-4xl"
           >
             Greater Kumasi has a waste emergency
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-4 text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
             The city generates about 2,000 tonnes of solid waste every day, the
             Oti landfill is near capacity, and the tricycles that already move
             most household waste work informally — unbookable, unverified,
@@ -66,7 +66,7 @@ export function ProblemSection() {
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {PROBLEM_STATS.map((stat, i) => (
             <Reveal key={stat.value} delay={i * 0.07} className="h-full">
-              <div className="flex h-full flex-col rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex h-full flex-col rounded-2xl border bg-card p-6 text-center shadow-sm">
                 <p className="font-display text-4xl font-bold tracking-tight tabular-nums text-primary">
                   {stat.value}
                 </p>
@@ -120,20 +120,20 @@ export function HowItWorks() {
             const Icon = STEP_ICONS[step.icon] ?? CircleDot
             return (
               <Reveal as="li" key={step.step} delay={i * 0.07} className="h-full">
-                <div className="relative flex h-full flex-col rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
+                <div className="relative flex h-full flex-col rounded-2xl border bg-card p-6 text-center shadow-sm transition-shadow hover:shadow-md">
                   <span
                     aria-hidden
                     className="absolute right-5 top-4 font-display text-3xl font-bold text-primary/15"
                   >
                     {step.step}
                   </span>
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <span className="mx-auto flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Icon className="size-5" aria-hidden />
                   </span>
                   <h3 className="mt-4 font-display text-lg font-semibold">
                     {step.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <p className="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">
                     {step.text}
                   </p>
                 </div>
@@ -175,7 +175,7 @@ export function PlansSection() {
           >
             Simple plans, honest prices
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
             The blended household tariff is{' '}
             <span className="font-semibold tabular-nums text-foreground">
               GHS 41.60
@@ -190,12 +190,12 @@ export function PlansSection() {
             return (
               <Reveal key={plan.id} delay={(i % 3) * 0.07} className="h-full">
                 <div
-                  className={`relative flex h-full flex-col rounded-2xl border bg-card p-6 shadow-sm ${
+                  className={`relative flex h-full flex-col rounded-2xl border bg-card p-6 text-center shadow-sm ${
                     popular ? 'border-transparent ring-2 ring-primary' : ''
                   }`}
                 >
                   {plan.badge && (
-                    <Badge className="absolute -top-3 left-6 border-transparent bg-gold text-gold-foreground shadow-sm">
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 border-transparent bg-gold text-gold-foreground shadow-sm">
                       {plan.badge}
                     </Badge>
                   )}
@@ -214,12 +214,12 @@ export function PlansSection() {
 
                   <ul className="mt-5 space-y-2.5 text-sm">
                     {plan.features.map((feature) => (
-                      <li key={feature} className="flex gap-2.5">
+                      <li key={feature} className="flex justify-center gap-2.5">
                         <Check
                           className="mt-0.5 size-4 shrink-0 text-primary"
                           aria-hidden
                         />
-                        <span className="leading-snug text-foreground/85">
+                        <span className="text-pretty leading-snug text-foreground/85">
                           {feature}
                         </span>
                       </li>
@@ -275,7 +275,7 @@ export function DifferentiatorsSection() {
           >
             Built differently, on purpose
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
             An independent platform — built by KoomBei Digital × WasteCure with
             KMA and local assemblies as partners, not bosses.
           </p>
@@ -286,14 +286,14 @@ export function DifferentiatorsSection() {
             const Icon = DIFF_ICONS[item.icon] ?? CircleDot
             return (
               <Reveal key={item.title} delay={(i % 3) * 0.07} className="h-full">
-                <div className="flex h-full flex-col rounded-2xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="flex h-full flex-col rounded-2xl border bg-card p-6 text-center shadow-sm transition-shadow hover:shadow-md">
+                  <span className="mx-auto flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Icon className="size-5" aria-hidden />
                   </span>
                   <h3 className="mt-4 font-display text-lg font-semibold">
                     {item.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <p className="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">
                     {item.text}
                   </p>
                 </div>

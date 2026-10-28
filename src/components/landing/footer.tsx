@@ -63,10 +63,10 @@ export function SiteFooter() {
   return (
     <footer className="bg-forest text-forest-foreground">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 text-center sm:grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center gap-3">
               <LogoMark className="h-10 w-10" />
               <span className="font-display text-xl font-bold text-cream">
                 KumBola
@@ -75,7 +75,7 @@ export function SiteFooter() {
             <p className="mt-2 text-sm font-semibold text-gold">
               KumBola — kill trash
             </p>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-cream/70">
+            <p className="mx-auto mt-3 max-w-xs text-pretty text-sm leading-relaxed text-cream/70">
               An independent platform by KoomBei Digital × WasteCure — with KMA,
               local assemblies and operator associations as partners, for
               Greater Kumasi.
@@ -87,7 +87,7 @@ export function SiteFooter() {
           <FooterColumn title="Legal" links={LEGAL_LINKS} />
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-cream/60 sm:flex-row">
+        <div className="mt-12 flex flex-col items-center justify-center gap-3 border-t border-white/10 pt-6 text-center text-xs text-cream/60">
           <p>© 2026 KumBola Limited. Dream with us. Rise with us.</p>
           <p>Built for Greater Kumasi 🇬🇭</p>
         </div>

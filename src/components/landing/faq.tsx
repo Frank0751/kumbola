@@ -31,7 +31,7 @@ export function FaqSection() {
           >
             Questions, answered
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
             Everything households, businesses and operators ask before their
             first pickup.
           </p>
@@ -45,10 +45,12 @@ export function FaqSection() {
           >
             {FAQS.map((faq, i) => (
               <AccordionItem key={faq.q} value={`faq-${i}`}>
-                <AccordionTrigger className="py-5 text-left text-base font-semibold hover:no-underline">
-                  {faq.q}
+                <AccordionTrigger className="py-5 text-center text-base font-semibold hover:no-underline">
+                  <span className="flex-1 text-balance text-center">
+                    {faq.q}
+                  </span>
                 </AccordionTrigger>
-                <AccordionContent className="pb-5 text-sm leading-relaxed text-muted-foreground">
+                <AccordionContent className="pb-5 text-center text-pretty text-sm leading-relaxed text-muted-foreground">
                   {faq.a}
                 </AccordionContent>
               </AccordionItem>

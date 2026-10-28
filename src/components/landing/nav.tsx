@@ -75,9 +75,11 @@ export function SiteNav() {
           >
             {session ? 'Open app' : 'Sign in'}
           </Button>
+          {/* Primary CTA — hidden below 380px so logo + hamburger fit at 320px;
+              the same CTA is the first button in the mobile menu. */}
           <Button
             onClick={() => onGetStarted('customer')}
-            className="h-10 px-4"
+            className="hidden h-11 min-[380px]:inline-flex px-4"
           >
             Book a pickup
           </Button>
