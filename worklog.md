@@ -157,7 +157,7 @@ Agent: Z.ai Code (orchestrator)
 Task: Pre-Netlify security audit + full push to GitHub
 
 Work Log:
-- Audited all tracked files + ALL git commits for real secrets (anon/service JWTs, sb_publishable_/sb_secret_, DB password Kumbola2026, ghp_ PAT, postgres:// strings): ZERO real secrets anywhere in history.
+- Audited all tracked files + ALL git commits for real secrets (anon/service JWTs, sb_publishable_/sb_secret_, the KumBola DB password [value redacted], ghp_ PAT, postgres:// strings): ZERO real secrets anywhere in history.
 - Confirmed .env only ever existed as scaffold sqlite placeholder in history; real .env untracked from first KumBola commit.
 - netlify.toml documents env var NAMES only; .env.example placeholders only; seed.ts contains only intentional demo password kumbola123.
 - Found sandbox auto-commit 9ace4b0 (UUID message, empty diff) on local main ahead of origin; verified harmless.
@@ -253,7 +253,7 @@ Stage Summary:
 - Repo fully restored at workspace root and verified in degraded mode; no code changes needed to run.
 
 Task 13 addendum (same session) — user-supplied KumBola env tested:
-- User pasted the full KumBola .env (project ref klpikejqvvjbwrraytgh, anon+service JWTs internally consistent, DB password Kumbola2026). Written to /home/z/my-project/.env.
+- User pasted the full KumBola .env (project ref klpikejqvvjbwrraytgh, anon+service JWTs internally consistent, DB password [value redacted]). Written to /home/z/my-project/.env.
 - The Supabase project is UNREACHABLE/DEAD: <ref>.supabase.co is NXDOMAIN on 8.8.8.8 AND 1.1.1.1; Supavisor pooler rejects the tenant ("tenant/user postgres.klpikejqvvjbwrraytgh not found"); production kumbola.netlify.app/api/data serves empty plans/sites (backend down).
 - Conclusion: the project was deleted (manually or via Supabase inactivity policy) or the saved ref is stale. Keys themselves are consistent — nothing to fix in the app.
 - Next: user must restore the project in the Supabase dashboard (if listed as paused) or create a new one and send the fresh env values. Then: bun supabase/migrate.ts + bun supabase/seed.ts rebuild everything (schema idempotent, seed regenerates demo data), update the same 6 env vars in Netlify to fix production. Pushes still blocked pending user PAT.
