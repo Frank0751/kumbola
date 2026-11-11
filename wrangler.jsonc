@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // KumBola on Cloudflare Workers via @opennextjs/cloudflare.
+  // NOTE: "name" must match the Workers Builds project name in the dashboard.
+  "name": "kumbola",
+  "main": ".open-next/worker.js",
+  // >= 2025-04-01 is required so workerd populates process.env from bindings
+  // (OpenNext reads SUPABASE_* / PAYSTACK_* through process.env).
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    // Self-reference used by the adapter for internal calls (revalidation).
+    // "service" must equal the worker "name" above.
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "kumbola"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+
+  // Environment variables are intentionally NOT defined here:
+  //   * NEXT_PUBLIC_* values must exist at BUILD time (they are compiled into
+  //     the client bundle) -> set them as Build variables in the Workers Builds
+  //     setup form / build settings.
+  //   * Server-only values (SUPABASE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY,
+  //     PAYSTACK_SECRET_KEY) are runtime secrets -> Worker Settings >
+  //     Variables and Secrets. OpenNext maps bindings to process.env.
+}

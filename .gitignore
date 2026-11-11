@@ -62,3 +62,7 @@ server.log
 
 # allow the env template
 !.env.example
+# Cloudflare Workers (OpenNext) build artifacts + local wrangler state
+.open-next/
+.wrangler/
+.dev.vars

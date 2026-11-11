@@ -318,3 +318,26 @@ Task 16 (2026-11-11) - Fix React hydration mismatch console error:
 
 Stage Summary:
 - Hydration console error eliminated for signed-in reloads; session restore unchanged from the user's perspective. Push -> Netlify auto-deploy also re-delivers the Task 15 client fixes to production (stale deploy was still serving the old wordmark).
+
+---
+Task ID: 17
+Agent: Z.ai Code (orchestrator)
+
+Task 17 (2026-11-11) - Cloudflare Workers deployment setup (move from Netlify):
+
+- Owner is importing the repo into Cloudflare Workers Builds. Prepared the repo end to end and verified the Worker artifact locally down to the workerd runtime.
+- Added @opennextjs/cloudflare@1.20.16 + wrangler@4.160.0 (devDependencies). A Next.js app cannot deploy with a plain `next build` + `wrangler deploy`; the OpenNext adapter produces the Worker bundle (.open-next/worker.js) plus static assets.
+- New files: wrangler.jsonc (name kumbola, main .open-next/worker.js, compatibility_date 2025-04-01 - required so workerd populates process.env from bindings; nodejs_compat + global_fetch_strictly_public; ASSETS binding; WORKER_SELF_REFERENCE self-service binding; observability on), open-next.config.ts (default config; no ISR in app so no R2/KV cache override), public/_headers (immutable caching for /_next/static).
+- package.json: build:cf / preview:cf / deploy:cf scripts. Existing `build` + netlify.toml kept untouched for rollback until Cloudflare is verified.
+- .gitignore: .open-next/, .wrangler/, .dev.vars. .env.example: Cloudflare section documenting build-time (NEXT_PUBLIC_*) vs runtime (secrets) variables and the exact form commands.
+- Sandbox wiped .env a 6th time at session start; restored from known credentials (7 vars incl. SUPABASE_SECRET_KEY + DB pooler URL). Note: sandbox recycled mid-session to a pre-Task-15 git snapshot; CF work was transplanted onto origin/main (967e324) via reset + reapply rather than pushing the stale-based commit.
+- VERIFICATION (all local, no Cloudflare account needed):
+  - bun run build:cf -> full Next 16 Turbopack build + OpenNext bundle OK ("Worker saved in .open-next/worker.js").
+  - bunx wrangler deploy --dry-run -> config valid, 5.86 MiB raw / 1.23 MiB gzip (under the 3 MiB free-tier gzip limit), bindings resolve (ASSETS, WORKER_SELF_REFERENCE).
+  - bunx wrangler dev (real workerd runtime) + .dev.vars: GET / 200; GET /api/data returns live Supabase plans; POST /api/auth demo login returns a real session JWT. SSR, server routes, service-key auth and fetch to Supabase all work inside the Workers runtime.
+- Runtime dependencies audit for Workers: server code = Supabase REST via fetch + node:crypto HMAC (Paystack webhook) - both fine under nodejs_compat. src/lib/db.ts (Prisma) is dead code, never imported -> not bundled. No next/image (no IMAGES binding needed), no ISR, no edge-runtime routes.
+- Owner dashboard form: project name must be `kumbola` (wrangler.jsonc name; screenshot showed a kumbala typo), build command `bun run build:cf`, deploy command `npx wrangler deploy`. Build variables: NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (+ optional legacy anon JWT). Runtime secrets (Settings > Variables and Secrets): SUPABASE_SECRET_KEY and/or SUPABASE_SERVICE_ROLE_KEY, optional PAYSTACK_SECRET_KEY.
+- After first deploy: verify https://kumbola.<subdomain>.workers.dev, then re-point any Paystack webhook/custom domain; Netlify can stay live as fallback until cutover.
+
+Stage Summary:
+- Repo is Cloudflare-ready and locally verified down to the workerd runtime; awaiting owner dashboard import. Push -> deploy should be one click.
