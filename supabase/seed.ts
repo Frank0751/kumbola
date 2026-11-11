@@ -87,8 +87,8 @@ const nextRef = () => `KB-${refCounter++}`
 
 async function main() {
   console.log('Purging existing KumBola demo data…')
-  // 1) purge dependent tables first (FK order)
-  for (const t of ['disposal_verifications', 'transactions', 'notifications', 'bookings', 'dumping_reports']) {
+  // 1) purge dependent tables first (FK order — payment_intents references profiles)
+  for (const t of ['payment_intents', 'disposal_verifications', 'transactions', 'notifications', 'bookings', 'dumping_reports']) {
     const { error } = await db.from(t).delete().neq('id', '00000000-0000-0000-0000-000000000000')
     if (error) throw new Error(`purge ${t}: ${error.message}`)
   }
