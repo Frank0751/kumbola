@@ -251,3 +251,9 @@ Work Log:
 
 Stage Summary:
 - Repo fully restored at workspace root and verified in degraded mode; no code changes needed to run.
+
+Task 13 addendum (same session) — user-supplied KumBola env tested:
+- User pasted the full KumBola .env (project ref klpikejqvvjbwrraytgh, anon+service JWTs internally consistent, DB password Kumbola2026). Written to /home/z/my-project/.env.
+- The Supabase project is UNREACHABLE/DEAD: <ref>.supabase.co is NXDOMAIN on 8.8.8.8 AND 1.1.1.1; Supavisor pooler rejects the tenant ("tenant/user postgres.klpikejqvvjbwrraytgh not found"); production kumbola.netlify.app/api/data serves empty plans/sites (backend down).
+- Conclusion: the project was deleted (manually or via Supabase inactivity policy) or the saved ref is stale. Keys themselves are consistent — nothing to fix in the app.
+- Next: user must restore the project in the Supabase dashboard (if listed as paused) or create a new one and send the fresh env values. Then: bun supabase/migrate.ts + bun supabase/seed.ts rebuild everything (schema idempotent, seed regenerates demo data), update the same 6 env vars in Netlify to fix production. Pushes still blocked pending user PAT.
