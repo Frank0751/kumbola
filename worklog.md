@@ -235,3 +235,19 @@ Work Log:
 
 Stage Summary:
 - Plate input no longer self-clears; interface is emoji-free across notifications, toasts, greetings and AI chat. Push -> Netlify auto-deploy.
+
+---
+Task ID: 13
+Agent: Z.ai Code (orchestrator)
+Task: Sandbox re-provision — pull Frank0751/kumbola, restore dev environment
+
+Work Log:
+- Cloned https://github.com/Frank0751/kumbola (HEAD 13ad794, clean); repo moved to workspace root (scaffold .git removed, repo .git + all sources at /home/z/my-project, origin intact).
+- bun install OK (849 packages, 7s); recreated .zscripts/dev.sh (setsid launcher); dev server serves :3000 — note: spawned processes are reaped at tool-call end in this sandbox build, so long-lived verification runs start the server inside the same tool call; the platform auto-runner keeps the preview alive for the user.
+- .env wiped again (4th time): root only had the scaffold sqlite placeholder; /tmp/my-project backup gone; disk-wide search found no other copy. Public client bundle of the live site (kumbola.netlify.app) contains no Supabase refs — auth flows through app API routes with Bearer tokens, so the public keys are not extractable from the bundle either.
+- Credentials note: user's ABN-Homes handover sheet (Supabase project acxolkvfkvgrdjmlnjjn) was tested and does NOT host KumBola — public.plans is missing and the KumBola demo login fails there. That sheet belongs to the separate ABN Homes app; KumBola's own Supabase env must come from the user (Netlify site settings or Supabase dashboard).
+- Degraded-mode verification (no Supabase env): /, /how-it-works, /plans, /drivers, /city, /faq, /legal all render 200; hero "Book a pickup" opens the auth dialog on the Create account tab (agent-browser, screenshot-verified); Kumi AI answered a pricing question end-to-end (public endpoint, no Supabase needed); /api/auth degrades to a clean 500; lint 0 problems; tsc 0 errors in src/ (pre-existing supabase/seed.ts script-only type errors unchanged).
+- BLOCKED on user input: (1) KumBola Supabase env values for full runtime + migrate/seed, (2) fresh GitHub PAT — sandbox cleanup wiped ~/.git-credentials again, so pushes fail until re-supplied, (3) pick for the next feature.
+
+Stage Summary:
+- Repo fully restored at workspace root and verified in degraded mode; no code changes needed to run.
