@@ -302,3 +302,19 @@ Client feedback round (4 items, verified against the client's screen recording):
 
 Stage Summary:
 - Data layer live and secured end to end; no-emoji/no-em-dash text policy enforced in code, seed and existing DB rows; client's 4 issues fixed. Push -> Netlify auto-deploy should finally deliver the KumBola rebrand to production.
+
+---
+Task ID: 16
+Agent: Z.ai Code (orchestrator)
+
+Task 16 (2026-11-11) - Fix React hydration mismatch console error:
+
+- Symptom (owner screenshot): Next.js dev overlay "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up."
+- Root cause: src/lib/store.ts (zustand persist, localStorage 'kumbola-session') rehydrated SYNCHRONOUSLY at store creation on the client. During React's hydration pass the store already held the restored session, while the server had rendered the initial state (session=null, hydrating=true -> <AppSplash />). Signed-in users reloading any route got a whole-tree server/client mismatch (AppSplash vs Customer/Driver/Admin app or landing). page.tsx already had the hydrating gate; the gate was useless because the store beat React to hydration.
+- Fix: persist option skipHydration: true + new src/components/shared/store-hydrator.tsx (client component, calls useSession.persist.rehydrate() inside useEffect, rendered once from the root layout after children). First client render now matches the server HTML exactly; the session restores right after mount and onRehydrateStorage still flips hydrating off, so the existing AppSplash gate handles the transition.
+- Verified with agent-browser on the dev server: signed-out landing renders clean; demo sign-in (customer@kumbola.com) loads the customer app with zero console errors; HARD RELOAD with a persisted session (the exact failing scenario) now restores "Medaase, Ama" + wallet + 4 bookings with ZERO hydration/mismatch console messages and zero page errors.
+- No other hydration sources found: kumi-chat loads history in a post-hydration effect; role-switch dialog seeds only on open-edge; marketing shell reads localStorage into a ref (never rendered). lint clean on changed files; tsc clean in src/ (pre-existing scripts//examples/ notes unchanged).
+- Also confirmed on this session start: keep-alive cron job 523422 ("KumBola Supabase keep-alive ping", 08:00 + 20:00 UTC daily) is live.
+
+Stage Summary:
+- Hydration console error eliminated for signed-in reloads; session restore unchanged from the user's perspective. Push -> Netlify auto-deploy also re-delivers the Task 15 client fixes to production (stale deploy was still serving the old wordmark).

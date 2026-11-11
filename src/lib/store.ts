@@ -39,6 +39,12 @@ export const useSession = create<SessionState>()(
       name: 'kumbola-session',
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ session: s.session, view: s.view }),
+      // Rehydrate manually after React has hydrated (see StoreHydrator).
+      // With the default synchronous rehydration the store already holds the
+      // restored session during the first client render, while the server
+      // rendered <AppSplash /> with session=null — React then logs a
+      // "tree hydrated but some attributes didn't match" console error.
+      skipHydration: true,
       onRehydrateStorage: () => (state) => {
         state?.setHydrating(false)
       },

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { StoreHydrator } from "@/components/shared/store-hydrator";
 
 const fraunces = Fraunces({
   variable: "--font-display",
@@ -50,6 +51,7 @@ export default function RootLayout({
         className={`${fraunces.variable} ${manrope.variable} font-sans antialiased bg-background text-foreground`}
       >
         {children}
+        <StoreHydrator />
         <Toaster position="top-center" richColors closeButton />
       </body>
     </html>
