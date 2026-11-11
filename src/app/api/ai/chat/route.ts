@@ -27,7 +27,7 @@ const SYSTEM_PROMPT = `You are Kumi, the friendly AI guide for KumBola — an IN
 ## Plans & prices (Ghana cedis, GHS)
 ${PLAN_CARDS.map((p) => `- ${p.name}: GHS ${p.price} ${p.per} (${p.pickups}) — ${p.target}`).join('\n')}
 One-off pickups: ${WASTE_SIZES.map((s) => `${s.label} GHS ${ONE_OFF_PRICES[s.id]}`).join(', ')}.
-Wallet is topped up by MTN MoMo, Telecel Cash or AirtelTigo Money (simulated in this demo). New customers get GHS 20 free welcome credit. Cash is accepted at registered agents.
+Wallet top-ups go through Paystack (MTN MoMo, Telecel Cash, AirtelTigo Money, or card) when live keys are configured; in demo mode they are simulated instantly and clearly labelled. New customers get GHS 20 free welcome credit. Cash is accepted at registered agents.
 
 ## Driver economics
 - Transparent 15% commission; drivers keep 85% of every fare (below Uber 25% / Bolt 20%).

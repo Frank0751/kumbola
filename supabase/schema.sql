@@ -180,3 +180,30 @@ grant select on all tables in schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to service_role;
 alter default privileges in schema public grant all on sequences to service_role;
 alter default privileges in schema public grant select on tables to anon, authenticated;
+
+-- -------------------------------------------
+-- payment_intents — real Paystack collections with simulation fallback
+-- (when PAYSTACK_SECRET_KEY is unset, intents finalize as simulated)
+-- -------------------------------------------
+create table if not exists public.payment_intents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id),
+  purpose text not null default 'topup' check (purpose in ('topup')),
+  provider text not null default 'paystack',
+  reference text unique not null,
+  amount_ghs numeric(10,2) not null,
+  channel text not null default 'momo',
+  network text,
+  status text not null default 'initiated' check (status in ('initiated','succeeded','failed')),
+  simulated boolean not null default false,
+  authorization_url text,
+  access_code text,
+  meta jsonb,
+  created_at timestamptz not null default now(),
+  completed_at timestamptz
+);
+create index if not exists payment_intents_user_created_idx on public.payment_intents (user_id, created_at desc);
+drop policy if exists "payment_intents owner read" on public.payment_intents;
+create policy "payment_intents owner read" on public.payment_intents for select using (auth.uid() = user_id);
+grant select on public.payment_intents to authenticated;
+grant all on public.payment_intents to service_role;

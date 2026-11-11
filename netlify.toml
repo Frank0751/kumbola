@@ -41,3 +41,9 @@
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY          (legacy anon JWT)
 #   SUPABASE_ANON_KEY                      (legacy anon JWT, server fallback)
 #   SUPABASE_JWKS_URL
+#
+# Payments (Paystack) — wallet top-ups via /api/payments/*:
+#   PAYSTACK_SECRET_KEY                    (sk_test_… / sk_live_…) mark SECRET;
+#                                          unset = simulated demo top-ups
+#   NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY        (pk_test_… / pk_live_…) NON-SECRET,
+#                                          optional (Paystack Inline JS later)

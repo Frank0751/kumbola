@@ -258,3 +258,25 @@ Task 13 addendum (same session) — user-supplied KumBola env tested:
 - Conclusion: the project was deleted (manually or via Supabase inactivity policy) or the saved ref is stale. Keys themselves are consistent — nothing to fix in the app.
 - Next: user must restore the project in the Supabase dashboard (if listed as paused) or create a new one and send the fresh env values. Then: bun supabase/migrate.ts + bun supabase/seed.ts rebuild everything (schema idempotent, seed regenerates demo data), update the same 6 env vars in Netlify to fix production.
 - Push completed: user supplied a classic PAT (stored in ~/.git-credentials, chmod 600). Pre-push hygiene: DB password mentions redacted from worklog (the string had already been public in Task 7's notes on origin — recommend a NEW DB password when the project is restored/recreated), unpushed commits re-attributed to Frank0751, scripts/ audited clean, .env and upload/ docs never tracked. Pushed 4 commits: origin/main = b21d3a7, local == remote verified via ls-remote. Push triggers a docs-only Netlify redeploy.
+
+---
+Task ID: 14
+Agent: Z.ai Code (orchestrator)
+Task: Supabase restore verification + golden-path E2E + Paystack MoMo collections
+
+Work Log:
+- User restored the (previously dead) Supabase project; polled auth health until GoTrue v2.197.0 responded (~2 min). Data survived the pause intact (22 profiles, 6 plans, 61 bookings, 157 transactions); PostgREST schema cache warmed a minute later. No migrate/seed needed. Production kumbola.netlify.app healed on its own once the DB was back (user's own GHS 2,000 top-up tests visible in the ledger).
+- Golden-path E2E via the app's API layer (scripts/e2e-golden-path.ts): customer book (KB-MWBHG8A5, pickup code 9458, GHS 6, wallet 114 -> 108) -> driver online -> new booking on job board -> business rule respected (409 "Finish your active job before accepting another"; finished seeded KB-100049 collect+verify first) -> accept -> collect with pickup code -> verify at Oti Sanitary Landfill (server-side geofence sim) -> payout 5.10 + 2.00 recyclables bonus -> admin KPIs moved (bookingsToday 1 -> 2, verificationRate 74 -> 76%) -> customer booking verified. ALL PASS.
+- Browser E2E (agent-browser): demo sign-in -> customer app; Bookings tab shows 7 bookings with verified receipts (proof of disposal, site ticket, GPS geofence note); top-up dialog -> Pay -> toast "(simulated for demo)".
+- Note: sandbox reaps spawned dev servers (sometimes mid-call) — every browser window now starts with a server-alive guard + re-open. Also noted a minor client behaviour: if the server dies while CustomerApp polls, the bookings list can reset to 0 until the next reload; self-heals, not addressed this round.
+- NEW FEATURE — Paystack MoMo collections (README roadmap #1):
+  - supabase/schema.sql: payment_intents table (idempotent DDL, owner-read RLS, explicit grants) — migrated live via supabase/migrate.ts.
+  - src/lib/payments-server.ts: paystackEnabled/Initialize/Verify (GHS, mobile_money + card channels), HMAC-SHA512 webhook signature validation, finalizeTopupIntent with an atomic claim (conditional UPDATE ... neq status 'succeeded') so a webhook racing the verify poll can never double-credit.
+  - API: POST /api/payments/initialize (real mode -> hosted checkout URL + callback ?payref=...; simulation mode -> instant finalize, demo behaviour preserved), GET /api/payments/verify (Paystack verify fallback for hosts that can't receive webhooks; ownership-scoped), POST /api/payments/webhook (503 when unconfigured, 401 on bad signature, idempotent credit).
+  - Customer wallet UI: top-up goes through initialize; with live keys it redirects to Paystack checkout and the payref return handler verifies + toasts + cleans the URL; simulation toasts label themselves.
+  - Env docs: .env.example + netlify.toml comments (PAYSTACK_SECRET_KEY = secret; public key optional, non-secret); Kumi SYSTEM_PROMPT updated.
+  - Verification: scripts/e2e-payments.ts ALL PASS (10 checks — simulate flag, credit +50, idempotent verify, cross-user 404, min/max guards, webhook 503 in simulation, ledger row). Real-mode smoke test with a deliberately invalid key: initialize 502 "Invalid key" surfaced verbatim, webhook bad-signature 401, intent marked failed; simulation restored after. lint 0 problems, tsc 0 errors in src/.
+- Going live: set PAYSTACK_SECRET_KEY in Netlify + local .env, register https://<domain>/api/payments/webhook in the Paystack dashboard — zero code change.
+
+Stage Summary:
+- Backend restored and verified end to end; wallet top-ups are now Paystack-ready in both modes; all E2E scripts persisted under scripts/. Push -> Netlify auto-deploy.

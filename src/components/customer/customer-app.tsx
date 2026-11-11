@@ -68,6 +68,41 @@ export function CustomerApp({
     }
   }, [load])
 
+  // Returning from the Paystack checkout: ?payref=KBPS-… — confirm, toast, clean the URL.
+  useEffect(() => {
+    const payref = new URLSearchParams(window.location.search).get('payref')
+    if (!payref) return
+    let cancelled = false
+    ;(async () => {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        try {
+          const data = await api<{ status: string }>(
+            `/api/payments/verify?reference=${encodeURIComponent(payref)}`,
+          )
+          if (cancelled) return
+          if (data.status === 'succeeded') {
+            toast.success('Payment received — wallet updated')
+            break
+          }
+          if (data.status === 'failed') {
+            toast.error('Payment was not completed — nothing was charged')
+            break
+          }
+          await new Promise((r) => setTimeout(r, 2500))
+        } catch {
+          break
+        }
+      }
+      if (!cancelled) {
+        window.history.replaceState({}, '', window.location.pathname)
+        load()
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [load])
+
   const profile = me?.profile ?? { ...initialProfile, wallet_balance: 0, plan_credits: 0, plan_id: null, account_type: 'household' as const, address: null }
   const plan: Plan | null = me?.plan ?? null
   const active = bookings.filter((b) => ['pending', 'assigned', 'collected'].includes(b.status))
@@ -565,8 +600,18 @@ function TopUpDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChan
   async function submit() {
     setBusy(true)
     try {
-      await api('/api/wallet', { method: 'POST', body: JSON.stringify({ action: 'topup', amount, network }) })
-      toast.success(`GHS ${amount} added via ${network}`)
+      const data = await api<{
+        reference: string
+        simulated?: boolean
+        authorization_url?: string
+        balance?: number
+      }>('/api/payments/initialize', { method: 'POST', body: JSON.stringify({ amount, network }) })
+      if (data.authorization_url) {
+        toast.message('Redirecting to secure payment')
+        window.location.href = data.authorization_url
+        return
+      }
+      toast.success(`GHS ${amount} added via ${network} (simulated for demo)`)
       onOpenChange(false)
       onDone()
     } catch (err) {
@@ -581,7 +626,7 @@ function TopUpDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChan
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Top up wallet</DialogTitle>
-          <DialogDescription>MTN MoMo · Telecel Cash · AirtelTigo Money (simulated for demo)</DialogDescription>
+          <DialogDescription>MTN MoMo · Telecel Cash · AirtelTigo Money — secured by Paystack with live keys, simulated in demo mode</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-2">
