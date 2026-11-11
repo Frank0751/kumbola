@@ -64,7 +64,7 @@ export function Hero() {
         </h1>
 
         <p className="mt-4 max-w-md text-pretty text-base leading-relaxed text-cream/75 sm:text-lg">
-          Trash pickup in minutes — pay with mobile money.
+          Trash pickup in minutes. Pay with mobile money.
         </p>
 
         <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:min-w-[22rem] sm:flex-row">

@@ -23,12 +23,12 @@ import { Reveal } from './motion'
 /* ------------------------------------------------------------------ */
 
 const DRIVER_BENEFITS: { icon: LucideIcon; text: string }[] = [
-  { icon: BadgePercent, text: 'Transparent 15% commission — you keep 85% of every fare' },
-  { icon: Wallet, text: 'Daily mobile money payouts — no week-long waits' },
-  { icon: Recycle, text: 'Recyclables bonus — GHS 0.50 per kg for clean segregated loads' },
-  { icon: KeyRound, text: 'Lease-to-own tricycles — own your vehicle over 24 months' },
+  { icon: BadgePercent, text: 'Transparent 15% commission, you keep 85% of every fare' },
+  { icon: Wallet, text: 'Daily mobile money payouts, no week-long waits' },
+  { icon: Recycle, text: 'Recyclables bonus, GHS 0.50 per kg for clean segregated loads' },
+  { icon: KeyRound, text: 'Lease-to-own tricycles, own your vehicle over 24 months' },
   { icon: ClipboardCheck, text: 'Licensing support under L.I. 2519, PPE kit, health screening & NHIS' },
-  { icon: Siren, text: 'Hour caps, rest prompts and an SOS button — your safety first' },
+  { icon: Siren, text: 'Hour caps, rest prompts and an SOS button for your safety' },
 ]
 
 export function DriversSection() {
@@ -214,7 +214,7 @@ function CityDashboardMock() {
       {/* collection heatmap */}
       <div className="mt-4 rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
         <p className="text-xs font-medium text-cream/60">
-          Collection heatmap — Suame
+          Suame collection heatmap
         </p>
         <div aria-hidden className="mt-3 grid grid-cols-8 gap-1.5">
           {Array.from({ length: 40 }).map((_, i) => (
@@ -270,7 +270,7 @@ export function CitySection() {
             </p>
             <p className="mt-3 text-pretty text-sm leading-relaxed text-muted-foreground">
               We work with KMA and the Suame, Kwabre East and Oforikrom
-              assemblies as MoU partners — and the platform is built to serve
+              assemblies as MoU partners, and the platform is built to serve
               any municipality that comes on board.
             </p>
 

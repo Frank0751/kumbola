@@ -309,12 +309,12 @@ async function main() {
   console.log('Seeding notifications…')
   const notif = []
   notif.push(
-    { user_id: ama, title: 'Welcome to KumBola! 🎉', body: 'Your verified waste collection account is ready. Book your first pickup any time.', kind: 'success', created_at: daysAgo(9) },
-    { user_id: ama, title: 'Plan activated', body: 'Individual Weekly is active — 4 pickups a month at GHS 45.', kind: 'info', created_at: daysAgo(9, 1) },
+    { user_id: ama, title: 'Welcome to KumBola!', body: 'Your verified waste collection account is ready. Book your first pickup any time.', kind: 'success', created_at: daysAgo(9) },
+    { user_id: ama, title: 'Plan activated', body: 'Individual Weekly is active, 4 pickups a month at GHS 45.', kind: 'info', created_at: daysAgo(9, 1) },
     { user_id: ama, title: 'Disposal verified', body: 'Your last pickup was verified at an approved site. Receipt available.', kind: 'success', created_at: daysAgo(1, 3) },
     { user_id: driverByEmail.get('driver@kumbola.com')!, title: 'New job available', body: 'A pickup near you is waiting. Open Available Jobs to accept.', kind: 'info', created_at: daysAgo(0, 1) },
     { user_id: driverByEmail.get('driver@kumbola.com')!, title: 'Payout sent', body: 'Your daily mobile money payout has been processed.', kind: 'success', created_at: daysAgo(1, 2) },
-    { user_id: driverByEmail.get('driver@kumbola.com')!, title: 'You are L.I. 2519 verified ✅', body: 'Your licence and vehicle checks are complete. Lease-to-own progress continues.', kind: 'success', created_at: daysAgo(20) },
+    { user_id: driverByEmail.get('driver@kumbola.com')!, title: 'You are L.I. 2519 verified', body: 'Your licence and vehicle checks are complete. Lease-to-own progress continues.', kind: 'success', created_at: daysAgo(20) },
     { user_id: adminRes.data.user.id, title: 'Weekly report ready', body: 'Collection heatmaps and disposal stats are on the dashboard.', kind: 'info', created_at: daysAgo(2, 5) },
     { user_id: adminRes.data.user.id, title: 'New dumping report', body: 'A resident reported open burning at Old Tafo. Review it on the map.', kind: 'warning', created_at: daysAgo(1, 7) },
   )

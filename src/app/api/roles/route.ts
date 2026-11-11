@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const profile = auth.profile as Profile
 
   if (profile.role === 'admin') {
-    return fail('Admins keep the city dashboard — switching is for customer and operator accounts.', 403)
+    return fail('Admins keep the city dashboard; switching is for customer and operator accounts.', 403)
   }
 
   let body: RolesBody
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     await admin.from('notifications').insert({
       user_id: auth.userId,
       title: 'Operator mode unlocked',
-      body: 'Your account can now accept pickups. Go online from the operator app to start earning — your customer bookings and wallet are safe and waiting.',
+      body: 'Your account can now accept pickups. Go online from the operator app to start earning. Your customer bookings and wallet are safe and waiting.',
       kind: 'success',
     })
     return json({ profile: updated })
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
   await admin.from('notifications').insert({
     user_id: auth.userId,
     title: 'Customer mode on',
-    body: 'Welcome back to booking mode. Your operator history and earnings are saved — switch back anytime from the account menu.',
+    body: 'Welcome back to booking mode. Your operator history and earnings are saved, switch back anytime from the account menu.',
     kind: 'info',
   })
   return json({ profile: updated })

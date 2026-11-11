@@ -4,9 +4,9 @@ import { FaqSection } from '@/components/landing/faq'
 import { FinalCta } from '@/components/landing/faq'
 
 export const metadata: Metadata = {
-  title: 'FAQ — KumBola',
+  title: 'FAQ | KumBola',
   description:
-    'Answers on booking, payments, proof of disposal, driver earnings, service areas — and whether KumBola is a KMA project.',
+    'Answers on booking, payments, proof of disposal, driver earnings, service areas, and whether KumBola is a KMA project.',
 }
 
 export default function FaqPage() {

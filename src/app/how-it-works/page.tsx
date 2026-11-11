@@ -4,7 +4,7 @@ import { DifferentiatorsSection, HowItWorks } from '@/components/landing/section
 import { FinalCta } from '@/components/landing/faq'
 
 export const metadata: Metadata = {
-  title: 'How it works — KumBola',
+  title: 'How it works | KumBola',
   description:
     'From full bin to verified disposal in five steps: book, dispatch, collect, verify disposal, pay. See why KumBola is built differently.',
 }

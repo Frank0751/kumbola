@@ -58,7 +58,7 @@ export function ProblemSection() {
           <p className="mx-auto mt-4 text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
             The city generates about 2,000 tonnes of solid waste every day, the
             Oti landfill is near capacity, and the tricycles that already move
-            most household waste work informally — unbookable, unverified,
+            most household waste work informally: unbookable, unverified,
             unprotected.
           </p>
         </Reveal>
@@ -144,7 +144,7 @@ export function HowItWorks() {
 
         <Reveal delay={0.1}>
           <p className="mt-8 text-center text-sm italic text-muted-foreground">
-            A job is not complete — and the operator is not paid — until disposal
+            A job is not complete, and the operator is not paid, until disposal
             is verified.
           </p>
         </Reveal>
@@ -180,7 +180,7 @@ export function PlansSection() {
             <span className="font-semibold tabular-nums text-foreground">
               GHS 41.60
             </span>{' '}
-            a month — about 65% below app-based pricing in Accra.
+            a month, about 65% below app-based pricing in Accra.
           </p>
         </Reveal>
 
@@ -276,7 +276,7 @@ export function DifferentiatorsSection() {
             Built differently, on purpose
           </h2>
           <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-            An independent platform — built by KoomBei Digital × WasteCure with
+            An independent platform built by KoomBei Digital × WasteCure with
             KMA and local assemblies as partners, not bosses.
           </p>
         </Reveal>

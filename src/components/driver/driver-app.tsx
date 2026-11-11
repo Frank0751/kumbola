@@ -60,7 +60,7 @@ export function DriverApp({
     try {
       await api('/api/driver', { method: 'POST', body: JSON.stringify({ online: v }) })
       setOnline(v)
-      toast.success(v ? 'You are online — jobs incoming' : 'You are offline. Rest well!')
+      toast.success(v ? 'You are online, jobs incoming' : 'You are offline. Rest well!')
       load()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not change status')
@@ -97,7 +97,7 @@ export function DriverApp({
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-semibold">{online ? 'Online — receiving jobs' : 'Offline'}</p>
+                <p className="text-sm font-semibold">{online ? 'Online, receiving jobs' : 'Offline'}</p>
                 <p className="text-xs opacity-70">{data ? `${data.onlineDrivers} operators online now` : '…'}</p>
               </div>
               <Switch checked={online} onCheckedChange={toggleOnline} disabled={toggling} aria-label="Go online" className="scale-125" />
@@ -125,7 +125,7 @@ export function DriverApp({
                   <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)}</div>
                 ) : available.length === 0 ? (
                   <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-                    No open jobs right now. You will hear the next one — stay online!
+                    No open jobs right now. You will hear the next one, stay online!
                   </CardContent></Card>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
@@ -197,7 +197,7 @@ export function DriverApp({
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Wallet className="h-4 w-4 text-primary" /> Payout history (daily MoMo)</CardTitle></CardHeader>
                 <CardContent className="divide-y">
-                  {(!data || data.transactions.length === 0) && <p className="py-6 text-center text-sm text-muted-foreground">No payouts yet — complete your first job</p>}
+                  {(!data || data.transactions.length === 0) && <p className="py-6 text-center text-sm text-muted-foreground">No payouts yet, complete your first job</p>}
                   {data?.transactions.slice(0, 10).map((t) => (
                     <div key={t.id} className="flex items-center gap-3 py-2.5">
                       <span className={cn('flex h-8 w-8 items-center justify-center rounded-lg', t.type === 'bonus' ? 'bg-gold/20 text-gold-foreground' : 'bg-emerald-100 text-emerald-700')}>
@@ -299,7 +299,7 @@ function AvailableJobCard({ booking: b, onAccepted }: { booking: Booking; onAcce
     setBusy(true)
     try {
       await api('/api/bookings/actions', { method: 'POST', body: JSON.stringify({ bookingId: b.id, action: 'accept' }) })
-      toast.success('Job accepted — head to the pickup point!')
+      toast.success('Job accepted, head to the pickup point!')
       onAccepted()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not accept job')
@@ -372,7 +372,7 @@ function CollectStep({ booking: b, onDone }: { booking: Booking; onDone: () => v
     setBusy(true)
     try {
       await api('/api/bookings/actions', { method: 'POST', body: JSON.stringify({ bookingId: b.id, action: 'collect', code }) })
-      toast.success('Pickup confirmed — now head to an approved site')
+      toast.success('Pickup confirmed, now head to an approved site')
       onDone()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not confirm pickup')
@@ -398,7 +398,7 @@ function CollectStep({ booking: b, onDone }: { booking: Booking; onDone: () => v
       <Button className="h-12 w-full text-base" onClick={submit} disabled={busy || code.length !== 4}>
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Confirm collection'}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Collection is only counted when the code matches — protects you and the customer.</p>
+      <p className="text-center text-xs text-muted-foreground">Collection is only counted when the code matches, protecting you and the customer.</p>
     </div>
   )
 }
@@ -457,7 +457,7 @@ function VerifyStep({ booking: b, onDone }: { booking: Booking; onDone: () => vo
 
   return (
     <div className="space-y-3 rounded-xl border p-4">
-      <p className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> Proof of disposal — finish the job here</p>
+      <p className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-primary" /> Proof of disposal: finish the job here</p>
       <div className="space-y-1.5">
         <Label>Approved disposal site</Label>
         <Select value={siteId} onValueChange={setSiteId}>

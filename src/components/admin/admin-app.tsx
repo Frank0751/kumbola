@@ -86,7 +86,7 @@ export function AdminApp({
             <div className="grid gap-4 lg:grid-cols-3">
               <Card className="lg:col-span-2">
                 <CardHeader className="pb-0">
-                  <CardTitle className="text-base">Daily activity — last 14 days</CardTitle>
+                  <CardTitle className="text-base">Daily activity (last 14 days)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {data ? <DailyChart data={data.daily} /> : <Skeleton className="h-48 w-full" />}
@@ -139,7 +139,7 @@ export function AdminApp({
                     <Skeleton className="h-32 w-full" />
                   )}
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Recyclables recovered: <strong className="text-foreground">{k ? num(k.recyclablesKg) : '—'} kg</strong> — ≈{k ? num(Math.round((k.recyclablesKg * 0.5) / 3)) : '—'} GHS net platform margin after driver bonuses.
+                    Recyclables recovered: <strong className="text-foreground">{k ? num(k.recyclablesKg) : '—'} kg</strong>, about {k ? num(Math.round((k.recyclablesKg * 0.5) / 3)) : '—'} GHS net platform margin after driver bonuses.
                   </p>
                 </CardContent>
               </Card>
@@ -230,7 +230,7 @@ export function AdminApp({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Geotagged illegal-dumping reports</CardTitle>
-                <p className="text-xs text-muted-foreground">Submitted by customers, drivers and community agents — routed to the responsible assembly.</p>
+                <p className="text-xs text-muted-foreground">Submitted by customers, drivers and community agents, routed to the responsible assembly.</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {(!data || data.reports.length === 0) && <p className="py-8 text-center text-sm text-muted-foreground">No reports</p>}

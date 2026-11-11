@@ -280,3 +280,25 @@ Work Log:
 
 Stage Summary:
 - Backend restored and verified end to end; wallet top-ups are now Paystack-ready in both modes; all E2E scripts persisted under scripts/. Push -> Netlify auto-deploy.
+
+---
+Task ID: 15
+Agent: Z.ai Code (orchestrator)
+
+Task 15 (2026-11-11) - Supabase resumed + RLS hardening + keep-alive + client feedback round:
+
+Supabase (project klpikejqvvjbwrraytgh):
+- Owner resumed the paused free-tier project. Verified: auth health 200 (GoTrue v2.197.0), all 7 tables intact, 0 rows (schema survived the pause; seed had never run before the outage).
+- .env restored after another sandbox wipe: publishable key doubles as anon key, JWKS URL derived. DB pooler region was lost with the old .env, recovered via scripts/find-pooler-region.ts probe: aws-0-eu-west-1.pooler.supabase.com.
+- Seed fix: purge loop now deletes payment_intents (added by the payments feature) before profiles, else FK payment_intents_user_id_fkey aborts the purge. Re-seeded: 19 profiles, 58 bookings, 42 verifications, 141 transactions. Demo login verified over the wire (customer@kumbola.com, HTTP 200).
+- SECURITY FIX: schema.sql enabled RLS on profiles/bookings/disposal_verifications/transactions/notifications/dumping_reports but defined NO owner policies (only plans/sites/payment_intents had them). App routes use the service role so E2E never noticed; direct authenticated REST reads were silently denied. Added supabase/rls-policies.sql + supabase/apply-rls.ts (owner-scoped SELECT policies; dumping_reports intentionally closed) and embedded the same block in schema.sql for fresh migrations. Verified live: demo customer sees own 4 bookings + wallet + notifications; cross-user reads return [].
+- KEEP-ALIVE (owner request: keep the DB from pausing): scripts/keepalive.ts pings auth health + REST read + demo password grant; Z.ai scheduled job "KumBola Supabase keep-alive ping" (job id 523422) runs it daily at 08:00 and 20:00 UTC with self-contained recovery instructions. Note: the cron lives in the Z.ai session platform; the only absolute guarantee against pausing is the Supabase Pro plan. DB password already public in old git history: rotate when convenient.
+
+Client feedback round (4 items, verified against the client's screen recording):
+1. Vehicle plate input wiped on mobile: frames show iOS keyboard committing an autocorrect suggestion ("Eggs") over the typed plate when focus leaves the field, not a React state bug. Fix: autoCorrect="off" + autoCapitalize="characters" + spellCheck={false} on both plate inputs (auth signup + role-switch dialog), plus autoCorrect/spellCheck on the base-municipality field.
+2. Emojis off the interface: removed from seed.ts notification titles; scripts/clean-db-text.ts stripped emoji/em-dash residue from 3 live notification rows (transactions already clean). Runtime notification titles in API routes were already plain text. Rating star and checkmark glyphs kept: plain text symbols, not emoji.
+3. Landing wordmark: repo already says KumBola (78ccc79) but production kumbola.netlify.app served a STALE deploy whose HTML still contains "Kum Bola" x6 + "kill trash" x6 (verified live). Pushing Task 15 re-triggers Netlify; if it still fails, inspect the Netlify deploy log.
+4. Em dashes removed from all user-facing strings across 24 files: landing copy, FAQ, legal, page metadata titles now "X | KumBola", toasts, API error messages, notification bodies, Kumi SYSTEM_PROMPT, admin/driver/customer apps. Empty-state placeholder dashes and numeric en-dash ranges kept (typographic, not the em-dash style being removed). lint 0 problems; tsc clean in src/ (pre-existing seed.ts type notes unchanged).
+
+Stage Summary:
+- Data layer live and secured end to end; no-emoji/no-em-dash text policy enforced in code, seed and existing DB rows; client's 4 issues fixed. Push -> Netlify auto-deploy should finally deliver the KumBola rebrand to production.

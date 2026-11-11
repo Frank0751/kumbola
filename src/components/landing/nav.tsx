@@ -92,7 +92,7 @@ export function SiteNav() {
       >
         <Link
           href="/"
-          aria-label="KumBola — home"
+          aria-label="KumBola home"
           className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Logo className="h-9 w-auto sm:h-10" />
@@ -143,7 +143,7 @@ export function SiteNav() {
                   </div>
                 </SheetTitle>
                 <SheetDescription className="mt-1.5">
-                  Waste pickup — Greater Kumasi
+                  Waste pickup in Greater Kumasi
                 </SheetDescription>
               </SheetHeader>
 

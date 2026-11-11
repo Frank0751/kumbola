@@ -90,7 +90,7 @@ export async function POST(req: Request) {
     })
     if (createErr || !created?.user) {
       const msg = createErr?.message ?? 'Could not create account'
-      if (msg.toLowerCase().includes('already')) return fail('An account with this email already exists — try signing in.', 409)
+      if (msg.toLowerCase().includes('already')) return fail('An account with this email already exists, try signing in.', 409)
       return fail(msg, 400)
     }
     const userId = created.user.id
@@ -160,7 +160,7 @@ export async function POST(req: Request) {
       return fail(msg, 401)
     }
     const profile = await buildSession(grant.userId)
-    if (!profile) return fail('Profile not found — contact support.', 403)
+    if (!profile) return fail('Profile not found, contact support.', 403)
     return json({
       session: {
         access_token: grant.access_token,
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
     const { refreshToken } = body
     if (!refreshToken) return fail('Refresh token required', 401)
     const grant = await tokenGrant('refresh_token', { refresh_token: refreshToken })
-    if (!grant.ok) return fail('Session expired — sign in again.', 401)
+    if (!grant.ok) return fail('Session expired, sign in again.', 401)
     const profile = await buildSession(grant.userId)
     if (!profile) return fail('Profile not found.', 403)
     return json({

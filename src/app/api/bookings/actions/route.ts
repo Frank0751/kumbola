@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     if (auth.profile.role !== 'driver') return fail('Only operators can confirm collection', 403)
     if (bkRow.driver_id !== auth.userId) return fail('This job is not assigned to you', 403)
     if (bkRow.status !== 'assigned') return fail('This job is not awaiting collection', 409)
-    if (!body.code || String(body.code).trim() !== String(bkRow.pickup_code)) return fail('Wrong pickup code — ask the customer to show the 4-digit code', 422)
+    if (!body.code || String(body.code).trim() !== String(bkRow.pickup_code)) return fail('Wrong pickup code, ask the customer to show the 4-digit code', 422)
 
     const { error } = await admin
       .from('bookings')
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
     const pos = simulatedSitePosition(site as unknown as DisposalSite, site.geofence_radius_m)
     const distance = haversineM(pos.lat, pos.lng, Number(site.lat), Number(site.lng))
     const within = distance <= (site.geofence_radius_m ?? 200)
-    if (!within) return fail('You are outside the site geofence — drive closer and retry.', 422)
+    if (!within) return fail('You are outside the site geofence, drive closer and retry.', 422)
 
     const ticket = `TKT-${Math.floor(100000 + Math.random() * 900000)}`
     const bonus = Number((recyclablesKg * RECYCLABLES_BONUS_PER_KG).toFixed(2))

@@ -120,20 +120,20 @@ export const PROBLEM_STATS = [
 export const DIFFERENTIATORS = [
   { title: 'Tricycle-first', text: 'Aboboyaa reach the lanes and compound houses that compactor trucks cannot enter.', icon: 'truck' },
   { title: 'Proof of disposal', text: 'No operator is paid until GPS, photo and site ticket confirm an approved site.', icon: 'shield-check' },
-  { title: 'Open marketplace', text: 'Existing operators join as partners with licences, PPE and NHIS — not competitors.', icon: 'handshake' },
+  { title: 'Open marketplace', text: 'Existing operators join as partners with licences, PPE and NHIS, not competitors.', icon: 'handshake' },
   { title: 'Fair economics', text: 'A transparent 15% commission. Drivers keep 85% and are paid daily by mobile money.', icon: 'wallet' },
   { title: 'Inclusive by design', text: 'USSD, agent and cash channels keep the service within reach of every household.', icon: 'users' },
   { title: 'City data', text: 'Live heatmaps and verified tonnage give assemblies the evidence they lack.', icon: 'bar-chart-3' },
 ]
 
 export const FAQS = [
-  { q: 'What does “KumBola” mean?', a: '“Kum” is Twi for kill and “bola” is Twi for refuse — so the name means “kill trash”, with a nod to founder Frank Koomson’s family name.' },
-  { q: 'Is KumBola a government or KMA project?', a: 'No. KumBola is an independent public-private platform built and operated by KoomBei Digital × WasteCure. KMA and the Suame, Kwabre East and Oforikrom assemblies are valued partners under MoU — alongside the Tricycle Riders Association and KNUST researchers — but no single assembly owns or runs the service.' },
+  { q: 'What does “KumBola” mean?', a: '“Kum” is Twi for kill and “bola” is Twi for refuse, so the name means “kill trash”, with a nod to founder Frank Koomson’s family name.' },
+  { q: 'Is KumBola a government or KMA project?', a: 'No. KumBola is an independent public-private platform built and operated by KoomBei Digital × WasteCure. KMA and the Suame, Kwabre East and Oforikrom assemblies are valued partners under MoU, alongside the Tricycle Riders Association and KNUST researchers, but no single assembly owns or runs the service.' },
   { q: 'How do I book a pickup?', a: 'Right here on the web app: sign up, choose a plan or a one-off pickup, and pay by mobile money. USSD, WhatsApp and community-agent booking are on the roadmap so any phone can use KumBola.' },
   { q: 'How do drivers get paid?', a: 'Drivers keep 85% of every fare and are paid by mobile money the same day. A per-kilogram bonus is paid for clean segregated recyclables. Payments are released only after disposal is verified.' },
-  { q: 'What is “proof of disposal”?', a: 'Every job ends at an approved site. The driver app records arrival inside a GPS geofence, a timestamped photo and the site ticket. If these don’t match, the operator isn’t paid — illegal dumping stops being profitable.' },
+  { q: 'What is “proof of disposal”?', a: 'Every job ends at an approved site. The driver app records arrival inside a GPS geofence, a timestamped photo and the site ticket. If these don’t match, the operator isn’t paid, so illegal dumping stops being profitable.' },
   { q: 'Which areas do you serve?', a: 'Pilot municipalities are Suame, Kwabre East and Oforikrom. Asokwa, Old Tafo and Kwadaso follow in Year 2.' },
-  { q: 'Can I pay cash?', a: 'Yes — cash is accepted at registered community agents and logged on the platform, so you still get full protection and receipts.' },
+  { q: 'Can I pay cash?', a: 'Yes. Cash is accepted at registered community agents and logged on the platform, so you still get full protection and receipts.' },
 ]
 
 /**

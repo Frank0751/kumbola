@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     payout = Number((amount * (1 - DRIVER_COMMISSION)).toFixed(2))
     commission = Number((amount * DRIVER_COMMISSION).toFixed(2))
     if (auth.profile.wallet_balance < amount) {
-      return fail(`Insufficient wallet balance — top up GHS ${amount} to book this pickup.`, 402)
+      return fail(`Insufficient wallet balance, top up GHS ${amount} to book this pickup.`, 402)
     }
   }
 
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
       .gte('wallet_balance', amount)
       .select('wallet_balance')
       .single()
-    if (dedErr || !updated) return fail('Insufficient wallet balance — top up first.', 402)
+    if (dedErr || !updated) return fail('Insufficient wallet balance, top up first.', 402)
   }
 
   const { data: booking, error: bkErr } = await admin
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
   await admin.from('notifications').insert({
     user_id: auth.userId,
     title: 'Pickup requested',
-    body: `Booking ${booking.reference} is queued for dispatch. Your pickup code is ${booking.pickup_code} — show it to the operator when they arrive.`,
+    body: `Booking ${booking.reference} is queued for dispatch. Your pickup code is ${booking.pickup_code}. Show it to the operator when they arrive.`,
     kind: 'info',
   })
 

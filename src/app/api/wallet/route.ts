@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       method: 'momo',
       network: 'MTN MoMo',
       reference: `SUB-${Date.now().toString(36).toUpperCase()}`,
-      note: `${plan.name} — ${credits} pickups activated`,
+      note: `${plan.name}, ${credits} pickups activated`,
     })
     await admin.from('notifications').insert({
       user_id: auth.userId,

@@ -40,7 +40,7 @@ const CHAT_ENDPOINT = '/api/ai/chat'
 const STORAGE_KEY = 'kumi-chat-history'
 const MAX_STORED_MESSAGES = 40
 const MAX_CONTEXT_MESSAGES = 12
-const SERVER_UNREACHABLE = "Kumi couldn't reach the server — try again."
+const SERVER_UNREACHABLE = "Kumi couldn't reach the server, try again."
 
 /** Thrown when the API answered (non-OK status or malformed body). */
 class KumiApiError extends Error {}
@@ -59,16 +59,16 @@ function greeting(authed: boolean): ChatMessage {
     : "Hi there! I'm **Kumi**, your KumBola guide."
   const outro = authed
     ? 'What would you like to know?'
-    : 'Sign in to book — but feel free to ask me anything. What\u2019s on your mind?'
+    : 'Sign in to book, but feel free to ask me anything. What\u2019s on your mind?'
   return {
     role: 'assistant',
     content: `${intro}
 
 I can help you with:
-- **Booking pickups** — schedule a waste collection in a few taps
-- **Plans & pricing** — compare pay-per-bag and monthly plans
-- **Driver earnings** — how trip pay and payouts work
-- **Proof of disposal** — verified dumping records for every load
+- **Booking pickups**: schedule a waste collection in a few taps
+- **Plans & pricing**: compare pay-per-bag and monthly plans
+- **Driver earnings**: how trip pay and payouts work
+- **Proof of disposal**: verified dumping records for every load
 
 ${outro}`,
   }
@@ -245,7 +245,7 @@ export function KumiChat({ authed }: { authed: boolean }) {
       }
 
       const reply = readStringField(data, 'reply')
-      if (!reply) throw new KumiApiError('Kumi sent an empty response — please try again.')
+      if (!reply) throw new KumiApiError('Kumi sent an empty response, please try again.')
 
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }])
     } catch (err) {
@@ -338,7 +338,7 @@ export function KumiChat({ authed }: { authed: boolean }) {
             <LogoMark className="size-8 shrink-0" />
             <div className="min-w-0 flex-1 leading-tight">
               <p className="truncate text-sm font-semibold">
-                Kumi <span className="font-normal text-muted-foreground">— your KumBola guide</span>
+                Kumi <span className="font-normal text-muted-foreground">· your KumBola guide</span>
               </p>
               <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <span className="relative flex size-2">
@@ -395,7 +395,7 @@ export function KumiChat({ authed }: { authed: boolean }) {
                       </button>
                       {signInHint && (
                         <span className="rounded-full border border-gold/50 bg-gold/15 px-2.5 py-0.5 font-medium text-gold-foreground">
-                          Sign in to continue — use the Sign in button in the top bar.
+                          Sign in to continue, use the Sign in button in the top bar.
                         </span>
                       )}
                     </div>
@@ -491,7 +491,7 @@ export function KumiChat({ authed }: { authed: boolean }) {
             </form>
 
             <p className="-mt-1.5 px-3 pb-2.5 text-center text-[11px] leading-snug text-muted-foreground">
-              Kumi is an AI guide — for urgent issues call +233 55 000 0000
+              Kumi is an AI guide. For urgent issues call +233 55 000 0000
             </p>
           </div>
         </div>

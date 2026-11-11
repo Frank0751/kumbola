@@ -33,7 +33,7 @@ export function StatusTimeline({ status }: { status: BookingStatus }) {
   if (status === 'cancelled') {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <XCircle className="h-4 w-4 text-destructive" /> Booking cancelled — any payment was refunded to your wallet.
+        <XCircle className="h-4 w-4 text-destructive" /> Booking cancelled, any payment was refunded to your wallet.
       </div>
     )
   }

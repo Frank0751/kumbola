@@ -85,7 +85,7 @@ export function RoleSwitchDialog({
       })
       if (res.profile) {
         onSwitched(res.profile)
-        toast.success('Operator mode unlocked — go online to start earning!')
+        toast.success('Operator mode unlocked, go online to start earning!')
         onOpenChange(false)
       } else {
         toast.error(res.error ?? 'Could not switch modes')
@@ -109,7 +109,7 @@ export function RoleSwitchDialog({
           </DialogTitle>
           <DialogDescription>
             {returning
-              ? 'Your operator details are saved from last time — pick up right where you left off.'
+              ? 'Your operator details are saved from last time, so pick up right where you left off.'
               : 'Use one account for both worlds. Your bookings, plan credits and wallet stay exactly as they are.'}
           </DialogDescription>
         </DialogHeader>
@@ -135,6 +135,10 @@ export function RoleSwitchDialog({
               value={plate}
               onChange={(e) => setPlate(e.target.value)}
               autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              enterKeyHint="next"
             />
           </div>
           <div className="grid gap-2">
@@ -160,6 +164,8 @@ export function RoleSwitchDialog({
               value={base}
               onChange={(e) => setBase(e.target.value)}
               autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </div>
         </div>

@@ -81,11 +81,11 @@ export function CustomerApp({
           )
           if (cancelled) return
           if (data.status === 'succeeded') {
-            toast.success('Payment received — wallet updated')
+            toast.success('Payment received, wallet updated')
             break
           }
           if (data.status === 'failed') {
-            toast.error('Payment was not completed — nothing was charged')
+            toast.error('Payment was not completed, nothing was charged')
             break
           }
           await new Promise((r) => setTimeout(r, 2500))
@@ -232,7 +232,7 @@ export function CustomerApp({
           {/* ---------------- BOOKINGS ---------------- */}
           <TabsContent value="bookings" className="space-y-4">
             {bookings.length === 0 && (
-              <Card><CardContent className="py-14 text-center text-muted-foreground">No bookings yet — your first pickup is one tap away.</CardContent></Card>
+              <Card><CardContent className="py-14 text-center text-muted-foreground">No bookings yet, your first pickup is one tap away.</CardContent></Card>
             )}
             {bookings.map((b) => <BookingCard key={b.id} booking={b} onCancel={load} />)}
           </TabsContent>
@@ -277,7 +277,7 @@ export function CustomerApp({
           <TabsContent value="plans" id="plans-tab" className="space-y-4">
             <div className="rounded-xl border bg-secondary/50 p-4 text-sm text-secondary-foreground">
               <Sparkles className="mb-1 h-4 w-4 text-primary" />
-              Plans are charged from your wallet balance. Credits apply automatically at booking — a compound plan costs about GHS 1 a day.
+              Plans are charged from your wallet balance. Credits apply automatically at booking, and a compound plan costs about GHS 1 a day.
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {PLAN_CARDS.map((p) => {
@@ -344,7 +344,7 @@ function BookingCard({ booking: b, onCancel, compact = false }: { booking: Booki
     setBusy(true)
     try {
       await api('/api/bookings/actions', { method: 'POST', body: JSON.stringify({ bookingId: b.id, action: 'cancel' }) })
-      toast.success('Booking cancelled — wallet refunded')
+      toast.success('Booking cancelled, wallet refunded')
       onCancel()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not cancel')
@@ -503,7 +503,7 @@ function BookDialog({
               <p className="font-mono text-3xl font-bold tracking-[0.3em] text-primary">{created.pickup_code}</p>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">Ref {created.reference} · {created.amount_ghs > 0 ? ghs(created.amount_ghs) + ' paid from wallet' : 'plan credit used'}</p>
-            <Button className="mt-5 w-full" onClick={() => onOpenChange(false)}>Done — track in My Bookings</Button>
+            <Button className="mt-5 w-full" onClick={() => onOpenChange(false)}>Done, track it in My Bookings</Button>
           </div>
         ) : (
           <>
@@ -576,7 +576,7 @@ function BookDialog({
               </div>
               {!usePlan && price > profile.wallet_balance && (
                 <p className="rounded-lg bg-destructive/10 p-2 text-center text-xs font-medium text-destructive">
-                  Balance too low — top up GHS {(price - profile.wallet_balance).toFixed(2)} in the Wallet tab first.
+                  Balance too low, top up GHS {(price - profile.wallet_balance).toFixed(2)} in the Wallet tab first.
                 </p>
               )}
               <Button className="h-12 w-full text-base" onClick={submit} disabled={busy || !address.trim() || (!usePlan && price > profile.wallet_balance)}>
@@ -626,7 +626,7 @@ function TopUpDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChan
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Top up wallet</DialogTitle>
-          <DialogDescription>MTN MoMo · Telecel Cash · AirtelTigo Money — secured by Paystack with live keys, simulated in demo mode</DialogDescription>
+          <DialogDescription>MTN MoMo · Telecel Cash · AirtelTigo Money. Secured by Paystack with live keys, simulated in demo mode</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-2">

@@ -142,7 +142,7 @@ export function AuthDialog({
           <DialogDescription>
             {tab === 'signin'
               ? 'Sign in to book pickups, drive, or manage the city dashboard.'
-              : 'Reliable collection, verified disposal, fair pay — Greater Kumasi.'}
+              : 'Reliable collection, verified disposal, fair pay across Greater Kumasi.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -270,7 +270,7 @@ export function AuthDialog({
                   </div>
                   <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
                     <Sparkles className="h-4 w-4 shrink-0 text-gold" />
-                    You start with GHS 20 free wallet credit. Plans are optional — pay-as-you-go works from day one.
+                    You start with GHS 20 free wallet credit. Plans are optional; pay-as-you-go works from day one.
                   </div>
                 </>
               ) : (
@@ -278,7 +278,17 @@ export function AuthDialog({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="plate">Vehicle plate</Label>
-                      <Input id="plate" placeholder="AS-0000-26" value={plate} onChange={(e) => setPlate(e.target.value)} />
+                      <Input
+                        id="plate"
+                        placeholder="AS-0000-26"
+                        value={plate}
+                        onChange={(e) => setPlate(e.target.value)}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="characters"
+                        spellCheck={false}
+                        enterKeyHint="next"
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Base municipality</Label>
