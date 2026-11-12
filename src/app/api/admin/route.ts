@@ -2,7 +2,7 @@
 import { verifyUser, json, fail, supabaseAdmin } from '@/lib/supabase-server'
 import { hydrateBookings } from '@/lib/booking-helpers'
 import { RECYCLABLES_BONUS_PER_KG } from '@/lib/constants'
-import type { AdminDashboardPayload, BookingStatus, Profile, DumpingReport, DisposalSite } from '@/lib/types'
+import type { AdminDashboardPayload, BookingStatus, Profile, DumpingReport, DisposalSite, Plan } from '@/lib/types'
 
 function dayKey(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -31,6 +31,8 @@ export async function GET(req: Request) {
     notifCountRes,
     verifAllRes,
     auditRes,
+    plansRes,
+    settingsRes,
   ] = await Promise.all([
     admin.from('profiles').select('*'),
     admin.from('bookings').select('*').order('created_at', { ascending: false }).limit(500),
@@ -42,6 +44,8 @@ export async function GET(req: Request) {
     admin.from('notifications').select('id', { count: 'exact', head: true }),
     admin.from('disposal_verifications').select('*').order('created_at', { ascending: false }).limit(20),
     admin.from('audit_events').select('*').order('created_at', { ascending: false }).limit(15),
+    admin.from('plans').select('*').order('sort_order'),
+    admin.from('app_settings').select('*').order('key'),
   ])
 
   const profiles = (profilesRes.data ?? []) as Profile[]
@@ -246,6 +250,22 @@ export async function GET(req: Request) {
     reviewQueue,
     auditEvents,
     drivers,
+    customers,
+    plans: (plansRes.data ?? []) as Plan[],
+    settings: (settingsRes.data ?? []).map((s) => {
+      const row = s as Record<string, unknown>
+      return {
+        key: row.key as string,
+        value: row.value as string,
+        updatedByName: (row.updated_by_name as string) || 'system',
+        updatedAt: row.updated_at as string,
+      }
+    }),
+    integrations: {
+      supabase: true, // this query succeeded — the database is reachable
+      paystack: Boolean(process.env.PAYSTACK_SECRET_KEY),
+      sms: false, // Arkesel integration pending (blueprint Phase 2)
+    },
     recentBookings: hydratedRecent,
     reports: (reportsRes.data ?? []) as DumpingReport[],
     sites: (sitesRes.data ?? []) as DisposalSite[],

@@ -260,3 +260,27 @@ create table if not exists public.audit_events (
 );
 alter table public.audit_events enable row level security;
 create index if not exists audit_events_created_idx on public.audit_events (created_at desc);
+
+-- ---------- COMMAND CENTRE v3 (Task 19) ----------
+-- Platform control store: feature flags / kill switches (spec 20).
+-- RLS enabled with NO policies: service role (server functions) only.
+create table if not exists public.app_settings (
+  key text primary key,
+  value text not null,
+  updated_by uuid,
+  updated_by_name text not null default '',
+  updated_at timestamptz not null default now()
+);
+alter table public.app_settings enable row level security;
+grant all on public.app_settings to service_role;
+
+-- Customer account blocking (spec 7: blocks and warnings, never silently).
+alter table public.profiles add column if not exists account_status text not null default 'active'
+  check (account_status in ('active','restricted'));
+alter table public.profiles add column if not exists block_reason text;
+alter table public.profiles add column if not exists blocked_at timestamptz;
+
+-- Admin wallet corrections use the ledger (entries never edited, only added).
+alter table public.transactions drop constraint if exists transactions_type_check;
+alter table public.transactions add constraint transactions_type_check
+  check (type in ('payment','payout','bonus','topup','subscription','commission','adjustment'));

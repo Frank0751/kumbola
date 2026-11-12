@@ -3,6 +3,7 @@
 // POST — create a booking (customer)
 import { verifyUser, json, fail, supabaseAdmin } from '@/lib/supabase-server'
 import { hydrateBookings } from '@/lib/booking-helpers'
+import { getSettings } from '@/lib/app-settings'
 import { ONE_OFF_PRICES, WASTE_SIZES, PLAN_PICKUP_TARIFF, DRIVER_COMMISSION } from '@/lib/constants'
 import type { Booking, WasteSize } from '@/lib/types'
 
@@ -57,6 +58,15 @@ export async function POST(req: Request) {
     | { wasteSize?: WasteSize; preferredTime?: string; notes?: string; usePlan?: boolean; address?: string; municipality?: string }
     | null
   if (!body) return fail('Invalid request body')
+
+  // ---- Command Centre control enforcement (Task 19) ----
+  const flags = await getSettings(['booking_enabled'])
+  if (flags.booking_enabled === 'false') {
+    return fail('New bookings are paused by KumBola operations. Please try again shortly.', 503)
+  }
+  if (auth.profile.account_status === 'restricted') {
+    return fail(`Your account is restricted${auth.profile.block_reason ? `: ${auth.profile.block_reason}` : ''}. Contact KumBola support.`, 403)
+  }
 
   const size = body.wasteSize
   if (!size || !ONE_OFF_PRICES[size]) return fail('Choose a valid waste size')

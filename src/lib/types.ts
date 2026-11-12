@@ -35,6 +35,9 @@ export interface Profile {
   vetting_note: string | null
   vetted_by: string | null
   vetted_at: string | null
+  account_status: 'active' | 'restricted'
+  block_reason: string | null
+  blocked_at: string | null
   created_at: string
 }
 
@@ -114,7 +117,7 @@ export interface Transaction {
   id: string
   user_id: string
   booking_id: string | null
-  type: 'payment' | 'payout' | 'bonus' | 'topup' | 'subscription' | 'commission'
+  type: 'payment' | 'payout' | 'bonus' | 'topup' | 'subscription' | 'commission' | 'adjustment'
   amount_ghs: number
   method: string
   network: string | null
@@ -240,6 +243,10 @@ export interface AdminDashboardPayload {
     createdAt: string
   }[]
   drivers: Profile[]
+  customers: Profile[]
+  plans: Plan[]
+  settings: { key: string; value: string; updatedByName: string; updatedAt: string }[]
+  integrations: { supabase: boolean; paystack: boolean; sms: boolean }
   recentBookings: Booking[]
   reports: DumpingReport[]
   sites: DisposalSite[]

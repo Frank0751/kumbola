@@ -50,6 +50,8 @@ export function AppHeader({
   const [busy, setBusy] = useState(false)
   const [switchOpen, setSwitchOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
+  const [maintenance, setMaintenance] = useState(false)
+  const [bookingsPaused, setBookingsPaused] = useState(false)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const load = () => {
@@ -64,6 +66,13 @@ export function AppHeader({
   useEffect(() => {
     load()
     timer.current = setInterval(load, 25000)
+    // Command Centre control flags (Task 19): surface kill switches app-wide
+    api<{ maintenance?: boolean; bookingEnabled?: boolean }>('/api/data')
+      .then((d) => {
+        setMaintenance(!!d.maintenance)
+        setBookingsPaused(d.bookingEnabled === false)
+      })
+      .catch(() => {})
     return () => {
       if (timer.current) clearInterval(timer.current)
     }
@@ -120,6 +129,13 @@ export function AppHeader({
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+      {(maintenance || bookingsPaused) && (
+        <div className="bg-gold/15 px-4 py-1.5 text-center text-xs font-medium text-gold-foreground">
+          {maintenance
+            ? 'Scheduled maintenance in progress — pickups continue, some features may pause briefly.'
+            : 'New bookings are temporarily paused by operations. Existing pickups run as normal.'}
+        </div>
+      )}
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
         <button onClick={onExit} className="flex items-center gap-2 rounded-lg focus-visible:outline-ring" aria-label="KumBola home">
           <LogoMark className="h-9 w-9" />

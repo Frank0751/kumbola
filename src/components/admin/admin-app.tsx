@@ -1,14 +1,17 @@
 'use client'
 
 // KumBola Command Centre — admin portal (Demo tier, per Admin Portal Specification)
-// Tabs: Today (health + decisions) · Analytics · Operations · Operators · Reports · Audit
+// Tabs: Today · Analytics · Operations · Operators · Customers · Platform · Reports · Audit
+// v3 (Task 19): global search (spec 3), full app control (flags/pricing/broadcast/
+// wallets/blocks), report generation with controlled exports (spec 16), toasts.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Home, Store, Truck, Scale, ShieldCheck, ShieldAlert, Wallet, AlertTriangle, Radio,
-  Landmark, MapPin, Users, Trash2, Clock3, Flame, TrendingUp, ClipboardCheck,
-  History, CheckCircle2, XCircle, Loader2, TimerReset,
+  Landmark, MapPin, Users, Trash2, Clock3, TrendingUp, ClipboardCheck,
+  History, CheckCircle2, XCircle, Loader2, TimerReset, Search, Cog, FileSpreadsheet, UserRound,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { AppHeader } from '@/components/shared/app-header'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,11 +20,12 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { DailyChart, BarList, Donut, MiniBars } from '@/components/admin/charts'
+import { CustomersTab, PlatformTab, ReportsTab } from '@/components/admin/admin-extras'
 import { api } from '@/lib/api-client'
 import { ghs, num, timeAgo, initials } from '@/lib/format'
 import type { AdminDashboardPayload, Profile, Booking } from '@/lib/types'
@@ -29,6 +33,17 @@ import { cn } from '@/lib/utils'
 
 type Health = 'ok' | 'warn' | 'bad'
 type Days = 7 | 14 | 30
+
+interface SearchPerson {
+  id: string
+  role: string
+  full_name: string
+  phone: string | null
+  municipality: string | null
+  account_status: string
+  vetting_status: string
+  wallet_balance: number
+}
 
 export function AdminApp({
   profile,
@@ -41,6 +56,14 @@ export function AdminApp({
   const [days, setDays] = useState<Days>(14)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [tab, setTab] = useState('today')
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+
+  // global search (spec 3)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<{ jobs: Booking[]; people: SearchPerson[] } | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   // dialogs
   const [detail, setDetail] = useState<Booking | null>(null)
@@ -68,17 +91,62 @@ export function AdminApp({
     }
   }, [load])
 
-  async function act(body: Record<string, unknown>, label: string) {
+  // Ctrl+K focuses global search (spec 3)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchRef.current?.focus()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // debounced search
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 2) {
+      setResults(null)
+      return
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await api<{ jobs: Booking[]; people: SearchPerson[] }>(`/api/admin/search?q=${encodeURIComponent(q)}`)
+        setResults(res)
+        setSearchOpen(true)
+      } catch {
+        /* transient */
+      }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [query])
+
+  async function act(body: Record<string, unknown>, label: string): Promise<boolean> {
     setBusy(label)
     setError(null)
     try {
       await api('/api/admin/actions', { method: 'POST', body: JSON.stringify(body) })
       await load()
+      toast.success('Done — recorded in the audit trail.')
+      return true
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Action failed')
+      const msg = e instanceof Error ? e.message : 'Action failed'
+      setError(msg)
+      toast.error(msg)
+      return false
     } finally {
       setBusy(null)
     }
+  }
+
+  function openPerson(p: SearchPerson) {
+    setSearchOpen(false)
+    setQuery('')
+    setHighlightId(p.id)
+    if (p.role === 'driver') setTab('operators')
+    else if (p.role === 'customer') setTab('customers')
   }
 
   const k = data?.kpis
@@ -134,7 +202,7 @@ export function AdminApp({
       icon: AlertTriangle,
       label: 'Open dumping reports',
       value: k ? num(k.openReports) : '—',
-      hint: 'routed to assemblies',
+      hint: 'triage on the Platform tab',
       state: !k ? 'ok' : k.openReports === 0 ? 'ok' : k.openReports <= 3 ? 'warn' : 'bad',
     },
     {
@@ -180,12 +248,12 @@ export function AdminApp({
     <div className="min-h-screen bg-background">
       <AppHeader profile={profile} onExit={onExit} accent="border-primary/20 bg-forest text-forest-foreground" />
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="flex items-center gap-2 font-display text-2xl font-bold sm:text-3xl">
               <Landmark className="h-6 w-6 text-primary" /> Command Centre
             </h1>
-            <p className="text-sm text-muted-foreground">Greater Kumasi · live collection, verification &amp; operations intelligence</p>
+            <p className="text-sm text-muted-foreground">Greater Kumasi · every pickup, cedi and operator under one roof</p>
           </div>
           <div className="flex items-center gap-2">
             {error && <span className="max-w-[240px] truncate rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive">{error}</span>}
@@ -195,8 +263,80 @@ export function AdminApp({
           </div>
         </div>
 
-        <Tabs defaultValue="today">
-          <TabsList className="mb-6 h-11 w-full justify-start overflow-x-auto sm:w-auto">
+        {/* ---------- global search (spec 3) ---------- */}
+        <div className="relative mb-5">
+          <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <Input
+            ref={searchRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => query.trim().length >= 2 && setSearchOpen(true)}
+            placeholder="Search anything — job reference, customer, operator, phone, pickup code…  (Ctrl+K)"
+            className="h-11 pl-9 pr-24 text-sm"
+            aria-label="Global search"
+          />
+          <kbd className="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">Ctrl K</kbd>
+          {searchOpen && query.trim().length >= 2 && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setSearchOpen(false)} />
+              <div className="absolute inset-x-0 top-full z-40 mt-1.5 max-h-96 overflow-y-auto rounded-xl border bg-popover p-2 shadow-xl">
+                {!results && <p className="px-2 py-3 text-sm text-muted-foreground">Searching…</p>}
+                {results && results.jobs.length === 0 && results.people.length === 0 && (
+                  <p className="px-2 py-3 text-sm text-muted-foreground">No matches for &ldquo;{query.trim()}&rdquo;.</p>
+                )}
+                {results && results.jobs.length > 0 && (
+                  <section className="mb-1">
+                    <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Jobs</p>
+                    {results.jobs.map((b) => (
+                      <button
+                        key={b.id}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
+                        onClick={() => {
+                          setSearchOpen(false)
+                          setQuery('')
+                          setDetail(b)
+                        }}
+                      >
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span className="font-mono text-xs">{b.reference}</span>
+                        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{b.customer?.full_name ?? '—'} · {b.municipality} · {b.address}</span>
+                        <StatusBadge status={b.status} />
+                      </button>
+                    ))}
+                  </section>
+                )}
+                {results && results.people.length > 0 && (
+                  <section>
+                    <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">People</p>
+                    {results.people.map((p) => (
+                      <button
+                        key={p.id}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
+                        onClick={() => openPerson(p)}
+                      >
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className={cn('text-[9px] font-bold', p.role === 'driver' ? 'bg-[color:var(--chart-2)]/15 text-[color:var(--chart-2)]' : 'bg-primary/10 text-primary')}>{initials(p.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{p.full_name}</span>
+                        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                          {p.role === 'driver' ? `operator · ${p.vetting_status.replace('_', ' ')}` : `customer · ${p.municipality ?? '—'} · ${ghs(p.wallet_balance)}`}
+                          {p.phone ? ` · ${p.phone.slice(0, 3)}•••` : ''}
+                        </span>
+                        {p.account_status === 'restricted' && <Badge variant="outline" className="h-5 border-destructive/40 px-1.5 text-[10px] text-destructive">restricted</Badge>}
+                        <UserRound className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </section>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <Tabs value={tab} onValueChange={(v) => { setTab(v); setHighlightId(null) }}>
+          <TabsList className="mb-6 flex h-11 w-full justify-start overflow-x-auto sm:w-auto">
             <TabsTrigger value="today" className="gap-1.5">
               <TimerReset className="h-4 w-4" /> Today
               {decisionsWaiting > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5">{decisionsWaiting}</Badge>}
@@ -207,7 +347,12 @@ export function AdminApp({
               <Truck className="h-4 w-4" /> Operators
               {pendingVets.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{pendingVets.length}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="reports" className="gap-1.5"><AlertTriangle className="h-4 w-4" /> Dumping reports <Badge variant="secondary" className="ml-1 h-5 px-1.5">{k?.openReports ?? '–'}</Badge></TabsTrigger>
+            <TabsTrigger value="customers" className="gap-1.5"><Users className="h-4 w-4" /> Customers</TabsTrigger>
+            <TabsTrigger value="platform" className="gap-1.5">
+              <Cog className="h-4 w-4" /> Platform
+              {(k?.openReports ?? 0) > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{k?.openReports}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="gap-1.5"><FileSpreadsheet className="h-4 w-4" /> Reports</TabsTrigger>
             <TabsTrigger value="audit" className="gap-1.5"><History className="h-4 w-4" /> Audit</TabsTrigger>
           </TabsList>
 
@@ -612,7 +757,7 @@ export function AdminApp({
                       <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">{!data ? 'Loading…' : 'No operators yet'}</td></tr>
                     )}
                     {data?.drivers.map((d) => (
-                      <tr key={d.id} className="border-b last:border-0">
+                      <tr key={d.id} className={cn('border-b last:border-0', highlightId === d.id && 'bg-primary/5 ring-1 ring-inset ring-primary/40')}>
                         <td className="py-2.5 pr-3">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-7 w-7">
@@ -642,39 +787,31 @@ export function AdminApp({
             </Card>
           </TabsContent>
 
+          {/* =============== CUSTOMERS =============== */}
+          <TabsContent value="customers">
+            {data ? (
+              <CustomersTab data={data} busy={busy} act={act} highlightId={highlightId} />
+            ) : (
+              <Skeleton className="h-64 w-full" />
+            )}
+          </TabsContent>
+
+          {/* =============== PLATFORM =============== */}
+          <TabsContent value="platform">
+            {data ? (
+              <PlatformTab data={data} busy={busy} act={act} highlightId={null} />
+            ) : (
+              <Skeleton className="h-64 w-full" />
+            )}
+          </TabsContent>
+
           {/* =============== REPORTS =============== */}
-          <TabsContent value="reports" className="space-y-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Geotagged illegal-dumping reports</CardTitle>
-                <p className="text-xs text-muted-foreground">Submitted by customers, drivers and community agents, routed to the responsible assembly.</p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {(!data || data.reports.length === 0) && <p className="py-8 text-center text-sm text-muted-foreground">No reports</p>}
-                {data?.reports.map((r) => (
-                  <div key={r.id} className="flex flex-wrap items-start gap-3 rounded-lg border p-3">
-                    <span className={cn(
-                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                      r.severity === 'high' ? 'bg-destructive/10 text-destructive' : r.severity === 'medium' ? 'bg-gold/20 text-gold-foreground' : 'bg-muted text-muted-foreground'
-                    )}>
-                      {r.severity === 'high' ? <Flame className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold">{r.location_text}</p>
-                      <p className="text-xs text-muted-foreground">{r.municipality} · {r.description}</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">{r.reporter_name ?? 'Anonymous'} · {timeAgo(r.created_at)}</p>
-                    </div>
-                    <Badge variant="outline" className={cn(
-                      r.status === 'open' && 'border-destructive/30 text-destructive',
-                      r.status === 'reviewing' && 'border-gold/40 text-gold-foreground',
-                      r.status === 'resolved' && 'border-emerald-300 text-emerald-700'
-                    )}>
-                      {r.status}
-                    </Badge>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+          <TabsContent value="reports">
+            {data ? (
+              <ReportsTab data={data} busy={busy} act={act} highlightId={null} />
+            ) : (
+              <Skeleton className="h-64 w-full" />
+            )}
           </TabsContent>
 
           {/* =============== AUDIT =============== */}
@@ -682,7 +819,7 @@ export function AdminApp({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Audit trail</CardTitle>
-                <p className="text-xs text-muted-foreground">Every staff action on money, operators, jobs and sites — append-only, kept for 2+ years (spec 21).</p>
+                <p className="text-xs text-muted-foreground">Every staff action on money, operators, jobs, settings and sites — append-only, kept for 2+ years (spec 21). Download the full export on the Reports tab.</p>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-sm">
@@ -785,8 +922,8 @@ export function AdminApp({
                     className="flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-colors hover:bg-muted/60 disabled:opacity-50"
                     disabled={busy !== null}
                     onClick={async () => {
-                      await act({ action: 'dispatch', bookingId: dispatchFor.id, driverId: d.id }, `dispatch-${dispatchFor.id}`)
-                      setDispatchFor(null)
+                      const ok = await act({ action: 'dispatch', bookingId: dispatchFor.id, driverId: d.id }, `dispatch-${dispatchFor.id}`)
+                      if (ok) setDispatchFor(null)
                     }}
                   >
                     <Avatar className="h-8 w-8">
@@ -846,11 +983,12 @@ export function AdminApp({
                   disabled={busy !== null || noteText.trim().length < 4}
                   onClick={async () => {
                     if (noteFor.kind === 'vet') {
-                      await act({ action: 'vet_driver', driverId: noteFor.driver.id, decision: noteFor.decision, note: noteText.trim() }, 'note')
+                      const ok = await act({ action: 'vet_driver', driverId: noteFor.driver.id, decision: noteFor.decision, note: noteText.trim() }, 'note')
+                      if (ok) setNoteFor(null)
                     } else {
-                      await act({ action: 'review_disposal', verificationId: noteFor.id, decision: 'reject', note: noteText.trim() }, 'note')
+                      const ok = await act({ action: 'review_disposal', verificationId: noteFor.id, decision: 'reject', note: noteText.trim() }, 'note')
+                      if (ok) setNoteFor(null)
                     }
-                    setNoteFor(null)
                   }}
                 >
                   {busy === 'note' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}

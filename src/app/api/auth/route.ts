@@ -3,6 +3,7 @@
 // because signInWithPassword on the shared service client would overwrite its
 // in-memory session and poison subsequent PostgREST calls.
 import { supabaseAdmin, json, fail } from '@/lib/supabase-server'
+import { getSettings } from '@/lib/app-settings'
 import type { Profile } from '@/lib/types'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -76,6 +77,11 @@ export async function POST(req: Request) {
   const admin = supabaseAdmin()
 
   if (body.action === 'signup') {
+    // Command Centre kill switch (Task 19): pause new registrations platform-wide
+    const flags = await getSettings(['signups_enabled'])
+    if (flags.signups_enabled === 'false') {
+      return fail('New registrations are paused right now. Please try again later.', 503)
+    }
     const { email, password, fullName, role = 'customer' } = body
     if (!email || !password || !fullName) return fail('Name, email and password are required')
     if (password.length < 8) return fail('Password must be at least 8 characters')
