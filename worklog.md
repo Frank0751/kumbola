@@ -341,3 +341,15 @@ Task 17 (2026-11-11) - Cloudflare Workers deployment setup (move from Netlify):
 
 Stage Summary:
 - Repo is Cloudflare-ready and locally verified down to the workerd runtime; awaiting owner dashboard import. Push -> deploy should be one click.
+
+## Task 17 — Admin analytics: growth, revenue, driver integrity (2026-11-13)
+
+**Ask**: user requested data analytics + asked how to stop drivers bypassing the platform (off-platform deals).
+
+**Shipped** (commit `57eb83b`, auto-deployed to Cloudflare, verified live + in browser):
+- `/api/admin` now returns: `growth` (new users 14d/today, active customers 30d, repeat-pair rate), `growthSeries` + `revenueDaily` (14-day series), `integrity[]` per driver (completed, verification %, cancel-after-assign, repeat customers, 0–100 score, flags).
+- Score heuristic: −15 per repeat-customer pair, −8 per cancel-after-assign beyond the first, −15 if verification <50% on ≥3 delivered jobs.
+- UI: Overview tab gained "Commission revenue (14 days)" + "New accounts (14 days)" MiniBars cards; Operators tab gained the **Integrity watchlist** (risk-sorted, flags under names, score badges). New dependency-free `MiniBars` SVG chart in `charts.tsx`.
+- Demo data itself shows the pattern: 89% of delivered jobs are repeat driver-customer pairs; Kofi Adjei flagged (score 55, 3 repeat customers).
+
+**Verification**: tsc clean in src/, eslint clean, local OpenNext build OK, CF remote build OK, live `GET /api/admin` as admin returns all new fields, browser screenshots confirm both tabs render (zero console errors).
