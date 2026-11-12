@@ -103,7 +103,7 @@ echo "== controlled exports =="
 for t in bookings transactions impact users audit; do
   TYPE=$(curl -s -o /tmp/rep.csv -w '%{http_code}' "$BASE/api/admin/report?type=$t&days=30&reason=e2e%20verification" -H "$AH")
   check "report $t 200" 200 "$TYPE"
-  head -c 2 /tmp/rep.csv | grep -q $'\xef\xbb\xbf' && ok "report $t UTF-8 BOM" || bad "report $t UTF-8 BOM"
+  head -c 3 /tmp/rep.csv | od -An -tx1 | tr -d ' \n' | grep -q '^efbbbf' && ok "report $t UTF-8 BOM" || bad "report $t UTF-8 BOM"
 done
 CODE=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/admin/report?type=bookings&days=30" -H "$AH")
 check "export without reason rejected" 400 "$CODE"

@@ -372,3 +372,27 @@ Stage Summary:
 **UI** (admin-app.tsx rewritten): six tabs — Today (12-tile health scorecard with target thresholds + state colors, "Needs your decision" inbox: vetting + disposal review + restricted operators, latest actions), Analytics (range toggle 7/14/30d, hover-tooltip line chart, click-to-drill municipality dialog, native-tooltip bars), Operations (job list with dispatch/cancel, job detail dialog with lifecycle timeline, site open/close switches), Operators (integrity watchlist + register with vetting badges), Reports, Audit (trail table). charts.tsx: DailyChart hover crosshair + tooltip, BarList onSelect, MiniBars/Donut native tooltips.
 
 **Verification**: tsc src clean, eslint clean, OpenNext build OK, deployed (88ce2c8), live API E2E passed (dispatch KB-MWDNFK4N→Edmond Amankwaah, Oti close/reopen, KB-100023 reject→approve, driver6 go-online 403, audit records all 5), browser E2E passed (approved Nana Kwabena via UI — badge counts dropped, audit shows it).
+
+## Task 19 — Command Centre v3: full platform control, report generation, global search (2026-11-13)
+
+**Ask**: make the admin panel more interactive and functional, generate reports, and control every part of the app.
+
+**Database** (scripts/migrate_command_v3.ts, applied via pooler):
+- new table app_settings (feature flags; RLS on, service-role only) seeded with booking_enabled/signups_enabled/maintenance_mode
+- profiles += account_status ('active'|'restricted'), block_reason, blocked_at
+- transactions type check constraint += 'adjustment' (admin wallet corrections go through the ledger)
+
+**Enforcement** (control with teeth):
+- POST /api/bookings — 503 when booking_enabled=false; 403 when the customer account_status='restricted'
+- POST /api/auth signup — 503 when signups_enabled=false
+- GET /api/data — returns maintenance/bookingEnabled flags; AppHeader shows amber banners across every app (customer/operator/admin)
+
+**API**:
+- POST /api/admin/actions += adjust_wallet (ledger entry + balance update, capped GHS 1,000, reason required), set_account (block/unblock, never silent), notify_user, broadcast (customers/operators/all), set_flag (whitelisted keys, before/after audited), update_plan (price + pickups), set_report_status (dumping triage) — 12 actions total, all audit_events
+- GET /api/admin += customers, plans, settings, integrations {supabase, paystack, sms}
+- GET /api/admin/search?q= — global search over bookings (reference/pickup code/address) + people (name/phone/email/plate), hydrated jobs
+- GET /api/admin/report?type=bookings|transactions|impact|users|audit&days=7|14|30|90&reason= — controlled CSV exports (UTF-8 BOM, generator stamp, reason required, audit-logged)
+
+**UI** (admin-app.tsx + new admin-extras.tsx): eight tabs — Today, Analytics, Operations, Operators, **Customers** (register with masked phones, plan credits, wallets; Wallet/Message/Block dialogs), **Platform** (feature flags with last-changed-by, system health, plans & pricing editor, broadcast composer, dumping triage selects), **Reports** (printable executive summary + 5 report generators with reason dialog), Audit. Global search bar (Ctrl+K) with dropdown results → job detail or tab jump + row highlight; sonner toasts on every action; act() returns success for dialog close.
+
+**Verification**: tsc src clean, eslint clean, OpenNext build OK, deployed (d770f08), live E2E (scripts/e2e_command_v3.sh) 33/38 — 5 fails were test-script bugs (BOM check used 2 bytes for a 3-byte BOM; app verified correct via od); browser E2E passed: search "Ama" → results dropdown → click → Customers tab with highlighted row, Wallet dialog renders, CSV reason dialog renders, maintenance banner appears app-wide on flag flip (reverted), zero console errors. E2E artifacts intentionally kept: +GHS 25 adjustment for Ama Serwaa, one new pending booking, audit entries for all 12 action types.
