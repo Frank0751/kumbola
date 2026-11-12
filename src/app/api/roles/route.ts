@@ -56,6 +56,8 @@ export async function POST(req: Request) {
         vehicle_type: body.vehicleType?.trim() || profile.vehicle_type || 'Aboboyaa 200cc',
         base_municipality: body.baseMunicipality?.trim() || profile.base_municipality || profile.municipality,
         is_online: false,
+        // Command Centre control: switching into operator mode enters the vetting queue
+        vetting_status: 'pending_review',
       })
       .eq('id', auth.userId)
       .select('*')

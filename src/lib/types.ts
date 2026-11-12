@@ -31,6 +31,10 @@ export interface Profile {
   total_earnings: number
   is_online: boolean
   license_verified: boolean
+  vetting_status: 'pending_review' | 'approved' | 'rejected' | 'suspended'
+  vetting_note: string | null
+  vetted_by: string | null
+  vetted_at: string | null
   created_at: string
 }
 
@@ -208,6 +212,32 @@ export interface AdminDashboardPayload {
     repeatCustomers: number
     score: number
     flags: string[]
+  }[]
+  vettingQueue: Profile[]
+  reviewQueue: {
+    id: string
+    status: 'pending' | 'approved' | 'rejected'
+    reference: string
+    municipality: string
+    driverName: string
+    siteName: string
+    weightKg: number
+    recyclablesKg: number
+    withinGeofence: boolean
+    distanceM: number | null
+    hasPhoto: boolean
+    hasTicket: boolean
+    method: string
+    createdAt: string
+  }[]
+  auditEvents: {
+    id: string
+    actorName: string
+    action: string
+    targetType: string
+    targetId: string | null
+    details: Record<string, unknown> | null
+    createdAt: string
   }[]
   drivers: Profile[]
   recentBookings: Booking[]

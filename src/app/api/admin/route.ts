@@ -14,6 +14,10 @@ export async function GET(req: Request) {
   if (auth.profile.role !== 'admin') return fail('Admin access only', 403)
   const admin = supabaseAdmin()
 
+  const url = new URL(req.url)
+  const daysParam = Number(url.searchParams.get('days') ?? '14')
+  const days = [7, 14, 30].includes(daysParam) ? daysParam : 14
+
   const today = dayKey(new Date())
 
   const [
@@ -25,6 +29,8 @@ export async function GET(req: Request) {
     reportsRes,
     sitesRes,
     notifCountRes,
+    verifAllRes,
+    auditRes,
   ] = await Promise.all([
     admin.from('profiles').select('*'),
     admin.from('bookings').select('*').order('created_at', { ascending: false }).limit(500),
@@ -32,8 +38,10 @@ export async function GET(req: Request) {
     admin.from('transactions').select('amount_ghs, created_at').eq('type', 'commission'),
     admin.from('transactions').select('amount_ghs').in('type', ['payout', 'bonus']),
     admin.from('dumping_reports').select('*').order('created_at', { ascending: false }).limit(30),
-    admin.from('disposal_sites').select('*').eq('is_active', true),
+    admin.from('disposal_sites').select('*'),
     admin.from('notifications').select('id', { count: 'exact', head: true }),
+    admin.from('disposal_verifications').select('*').order('created_at', { ascending: false }).limit(20),
+    admin.from('audit_events').select('*').order('created_at', { ascending: false }).limit(15),
   ])
 
   const profiles = (profilesRes.data ?? []) as Profile[]
@@ -54,9 +62,9 @@ export async function GET(req: Request) {
   const statusOrder: BookingStatus[] = ['pending', 'assigned', 'collected', 'verified', 'cancelled']
   const byStatus = statusOrder.map((status) => ({ status, count: bookings.filter((b) => b.status === status).length }))
 
-  // daily activity, last 14 days
+  // daily activity + growth + revenue, last N days
   const daily: { date: string; bookings: number; tonnes: number }[] = []
-  for (let i = 13; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86400000)
     const key = dayKey(d)
     const dayBookings = activeBookings.filter((b) => dayKey(new Date(b.created_at as string)) === key)
@@ -84,13 +92,56 @@ export async function GET(req: Request) {
 
   const hydratedRecent = await hydrateBookings(bookings.slice(0, 15))
 
+  // ---------- Command Centre queues ----------
+  const vettingQueue = drivers
+    .filter((d) => d.vetting_status !== 'approved')
+    .sort((a, b) => (a.vetting_status === 'pending_review' ? -1 : 1) - (b.vetting_status === 'pending_review' ? -1 : 1))
+
+  const driverName = (id: string | null) =>
+    id ? profiles.find((p) => p.id === id)?.full_name ?? 'Unknown' : '—'
+  const siteName = (id: string) => (sitesRes.data as { id: string; name: string }[] | null)?.find((s) => s.id === id)?.name ?? 'Unknown site'
+  const bookingById = new Map(bookings.map((b) => [b.id as string, b as Record<string, unknown>]))
+  const reviewQueue = (verifAllRes.data ?? []).map((v) => {
+    const row = v as Record<string, unknown>
+    const b = bookingById.get(row.booking_id as string)
+    return {
+      id: row.id as string,
+      status: row.status as 'pending' | 'approved' | 'rejected',
+      reference: (b?.reference as string) ?? '—',
+      municipality: (b?.municipality as string) ?? '—',
+      driverName: driverName(row.driver_id as string),
+      siteName: siteName(row.site_id as string),
+      weightKg: Number(row.weight_kg ?? 0),
+      recyclablesKg: Number(row.recyclables_kg ?? 0),
+      withinGeofence: Boolean(row.within_geofence),
+      distanceM: row.distance_m === null || row.distance_m === undefined ? null : Number(row.distance_m),
+      hasPhoto: Boolean(row.photo_url),
+      hasTicket: Boolean(row.site_ticket),
+      method: (row.method as string) ?? '',
+      createdAt: row.created_at as string,
+    }
+  })
+
+  const auditEvents = (auditRes.data ?? []).map((e) => {
+    const row = e as Record<string, unknown>
+    return {
+      id: row.id as string,
+      actorName: (row.actor_name as string) || 'system',
+      action: row.action as string,
+      targetType: (row.target_type as string) || '',
+      targetId: (row.target_id as string) ?? null,
+      details: (row.details as Record<string, unknown> | null) ?? null,
+      createdAt: row.created_at as string,
+    }
+  })
+
   // ---------- growth & revenue analytics (last 14 days) ----------
   const delivered = bookings.filter((b) => b.status === 'collected' || b.status === 'verified')
   const growthSeries: { date: string; users: number }[] = []
   const revenueDaily: { date: string; ghs: number }[] = []
   let newUsers14d = 0
   let newUsersToday = 0
-  for (let i = 13; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const key = dayKey(new Date(Date.now() - i * 86400000))
     const dayUsers = profiles.filter((p) => dayKey(new Date(p.created_at as string)) === key)
     const dayRevenue = commissionTxns.filter((t) => dayKey(new Date(t.created_at)) === key)
@@ -99,6 +150,7 @@ export async function GET(req: Request) {
     newUsers14d += dayUsers.length
     if (key === today) newUsersToday = dayUsers.length
   }
+  if (days === 7) newUsers14d = growthSeries.reduce((s, g) => s + g.users, 0)
   const cutoff30d = Date.now() - 30 * 86400000
   const activeCustomers30d = new Set(
     activeBookings
@@ -190,6 +242,9 @@ export async function GET(req: Request) {
     growthSeries,
     revenueDaily,
     integrity,
+    vettingQueue,
+    reviewQueue,
+    auditEvents,
     drivers,
     recentBookings: hydratedRecent,
     reports: (reportsRes.data ?? []) as DumpingReport[],

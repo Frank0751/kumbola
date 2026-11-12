@@ -235,3 +235,28 @@ drop policy if exists "payment_intents owner read" on public.payment_intents;
 create policy "payment_intents owner read" on public.payment_intents for select using (auth.uid() = user_id);
 grant select on public.payment_intents to authenticated;
 grant all on public.payment_intents to service_role;
+
+-- ---------- ADMIN COMMAND CENTRE (Task 18) ----------
+-- Operator vetting state. Enforced when a driver tries to go online:
+-- only 'approved' operators may receive jobs. Admin actions in
+-- /api/admin/actions write these fields and audit_events rows.
+alter table public.profiles add column if not exists vetting_status text not null default 'pending_review'
+  check (vetting_status in ('pending_review','approved','rejected','suspended'));
+alter table public.profiles add column if not exists vetting_note text;
+alter table public.profiles add column if not exists vetted_by uuid;
+alter table public.profiles add column if not exists vetted_at timestamptz;
+
+-- Tamper-evident admin audit trail (spec 21: every staff action recorded).
+-- RLS is enabled with NO policies: only the service role (server functions) can read/write.
+create table if not exists public.audit_events (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid,
+  actor_name text not null default '',
+  action text not null,
+  target_type text not null default '',
+  target_id text,
+  details jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.audit_events enable row level security;
+create index if not exists audit_events_created_idx on public.audit_events (created_at desc);

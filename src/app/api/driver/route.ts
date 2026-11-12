@@ -67,6 +67,16 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as { online?: boolean } | null
   if (typeof body?.online !== 'boolean') return fail('online boolean required')
 
+  // Command Centre control: only vetted operators may receive jobs.
+  if (body.online && auth.profile.vetting_status !== 'approved') {
+    return fail(
+      auth.profile.vetting_status === 'pending_review'
+        ? 'Your account is awaiting verification by the KumBola operations team. You will be notified once approved.'
+        : 'Your operator account is not active. Contact the KumBola operations desk.',
+      403
+    )
+  }
+
   const { error } = await supabaseAdmin()
     .from('profiles')
     .update({ is_online: body.online })
