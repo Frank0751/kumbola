@@ -353,3 +353,22 @@ Stage Summary:
 - Demo data itself shows the pattern: 89% of delivered jobs are repeat driver-customer pairs; Kofi Adjei flagged (score 55, 3 repeat customers).
 
 **Verification**: tsc clean in src/, eslint clean, local OpenNext build OK, CF remote build OK, live `GET /api/admin` as admin returns all new fields, browser screenshots confirm both tabs render (zero console errors).
+
+## Task 18 — Command Centre v2: driver vetting, audit trail, dispatch, interactive analytics (2026-11-13)
+
+**Ask**: user wants a world-class admin portal per the two uploaded specs (Product & Technical Blueprint + Admin Portal Specification), live/interactive analytics, driver vetting, all login credentials.
+
+**Database** (scripts/migrate_vetting.ts, applied via Supabase pooler):
+- profiles += vetting_status ('pending_review'|'approved'|'rejected'|'suspended'), vetting_note, vetted_by, vetted_at
+- new table audit_events (append-only, RLS on, service-role only)
+- backfill: all existing accounts approved; driver5 + driver6 parked as pending_review to demo the queue
+
+**API**:
+- POST /api/admin/actions — vet_driver (approve/reject/suspend/reinstate), set_site (open/close + notify online operators), dispatch (assign/reassign, approved+online only), cancel_booking (reason-coded), review_disposal (approve/reject evidence); every action writes audit_events + notifications
+- GET /api/admin?days=7|14|30 — adds vettingQueue, reviewQueue (evidence chips), auditEvents; sites now include closed ones
+- POST /api/driver — go-online gated on vetting_status=approved (403 with clear message)
+- POST /api/roles — switching to operator mode enters the vetting queue
+
+**UI** (admin-app.tsx rewritten): six tabs — Today (12-tile health scorecard with target thresholds + state colors, "Needs your decision" inbox: vetting + disposal review + restricted operators, latest actions), Analytics (range toggle 7/14/30d, hover-tooltip line chart, click-to-drill municipality dialog, native-tooltip bars), Operations (job list with dispatch/cancel, job detail dialog with lifecycle timeline, site open/close switches), Operators (integrity watchlist + register with vetting badges), Reports, Audit (trail table). charts.tsx: DailyChart hover crosshair + tooltip, BarList onSelect, MiniBars/Donut native tooltips.
+
+**Verification**: tsc src clean, eslint clean, OpenNext build OK, deployed (88ce2c8), live API E2E passed (dispatch KB-MWDNFK4N→Edmond Amankwaah, Oti close/reopen, KB-100023 reject→approve, driver6 go-online 403, audit records all 5), browser E2E passed (approved Nana Kwabena via UI — badge counts dropped, audit shows it).
