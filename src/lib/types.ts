@@ -190,6 +190,25 @@ export interface AdminDashboardPayload {
   byMunicipality: { municipality: string; tonnes: number; bookings: number }[]
   byStatus: { status: BookingStatus; count: number }[]
   revenueMix: { label: string; value: number }[]
+  growth: {
+    newUsers14d: number
+    newUsersToday: number
+    activeCustomers30d: number
+    /** % of delivered jobs that come from driver-customer pairs with >=2 jobs (bypass signal) */
+    repeatRatePct: number
+  }
+  growthSeries: { date: string; users: number }[]
+  revenueDaily: { date: string; ghs: number }[]
+  integrity: {
+    driverId: string
+    fullName: string
+    completed: number
+    verificationPct: number | null
+    cancelAfterAssign: number
+    repeatCustomers: number
+    score: number
+    flags: string[]
+  }[]
   drivers: Profile[]
   recentBookings: Booking[]
   reports: DumpingReport[]

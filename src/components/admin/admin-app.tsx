@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import {
-  Home, Store, Truck, Scale, ShieldCheck, Wallet, AlertTriangle, Radio,
-  Landmark, MapPin, Users, Loader2, Trash2, Clock3, Flame,
+  Home, Store, Truck, Scale, ShieldCheck, ShieldAlert, Wallet, AlertTriangle, Radio,
+  Landmark, MapPin, Users, Loader2, Trash2, Clock3, Flame, TrendingUp,
 } from 'lucide-react'
 import { AppHeader } from '@/components/shared/app-header'
 import { StatusBadge } from '@/components/shared/status-badge'
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { DailyChart, BarList, Donut } from '@/components/admin/charts'
+import { DailyChart, BarList, Donut, MiniBars } from '@/components/admin/charts'
 import { api } from '@/lib/api-client'
 import { ghs, num, timeAgo, initials } from '@/lib/format'
 import type { AdminDashboardPayload, Profile } from '@/lib/types'
@@ -144,6 +144,42 @@ export function AdminApp({
                 </CardContent>
               </Card>
             </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-1.5 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Commission revenue (14 days)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data ? (
+                    <>
+                      <MiniBars data={data.revenueDaily.map((r) => ({ date: r.date, value: r.ghs }))} unit="GHS" colorClass="fill-primary" />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        14-day total: <strong className="text-foreground">{ghs(data.revenueDaily.reduce((s, r) => s + r.ghs, 0))}</strong>
+                      </p>
+                    </>
+                  ) : (
+                    <Skeleton className="h-40 w-full" />
+                  )}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-1.5 text-base"><Users className="h-4 w-4 text-primary" /> New accounts (14 days)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data ? (
+                    <>
+                      <MiniBars data={data.growthSeries.map((g) => ({ date: g.date, value: g.users }))} unit="signups" colorClass="fill-[color:var(--chart-2)]" />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {num(data.growth.newUsers14d)} new accounts ({data.growth.newUsersToday} today) · <strong className="text-foreground">{num(data.growth.activeCustomers30d)}</strong> customers booked in the last 30 days
+                      </p>
+                    </>
+                  ) : (
+                    <Skeleton className="h-40 w-full" />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* -------------- OPERATIONS -------------- */}
@@ -199,6 +235,62 @@ export function AdminApp({
 
           {/* -------------- DRIVERS -------------- */}
           <TabsContent value="drivers" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                  <ShieldAlert className="h-4 w-4 text-primary" /> Integrity watchlist
+                  {data && (
+                    <Badge variant="outline" className={cn('ml-1', data.growth.repeatRatePct > 40 ? 'border-destructive/40 text-destructive' : data.growth.repeatRatePct > 20 ? 'border-gold/40 text-gold-foreground' : 'border-emerald-300 text-emerald-700')}>
+                      {data.growth.repeatRatePct}% repeat-pair jobs
+                    </Badge>
+                  )}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Signals that a driver may be moving customers off-platform: serving the same household repeatedly, cancelling after seeing an address, or completing loads without verified disposal. Sorted with the highest risk first.
+                </p>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table className="w-full min-w-[680px] text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <th className="pb-2 pr-3">Operator</th>
+                      <th className="pb-2 pr-3">Jobs</th>
+                      <th className="pb-2 pr-3">Verified</th>
+                      <th className="pb-2 pr-3">Cancel&ndash;after&ndash;assign</th>
+                      <th className="pb-2 pr-3">Repeat customers</th>
+                      <th className="pb-2">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(!data || data.integrity.length === 0) && (
+                      <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">{!data ? 'Loading…' : 'No operator activity yet'}</td></tr>
+                    )}
+                    {data?.integrity.map((r) => (
+                      <tr key={r.driverId} className="border-b last:border-0">
+                        <td className="py-2.5 pr-3">
+                          <span className="font-medium">{r.fullName}</span>
+                          {r.flags.length > 0 && <span className="block text-[11px] text-destructive">{r.flags.join(' · ')}</span>}
+                        </td>
+                        <td className="py-2.5 pr-3 tabular-nums">{r.completed}</td>
+                        <td className="py-2.5 pr-3 tabular-nums">{r.verificationPct === null ? '—' : `${r.verificationPct}%`}</td>
+                        <td className="py-2.5 pr-3 tabular-nums">{r.cancelAfterAssign}</td>
+                        <td className={cn('py-2.5 pr-3 tabular-nums', r.repeatCustomers > 0 && 'font-semibold text-destructive')}>{r.repeatCustomers}</td>
+                        <td className="py-2.5">
+                          <Badge variant="outline" className={cn(
+                            r.score >= 80 && 'border-emerald-300 text-emerald-700',
+                            r.score >= 50 && r.score < 80 && 'border-gold/40 text-gold-foreground',
+                            r.score < 50 && 'border-destructive/40 text-destructive'
+                          )}>
+                            {r.score}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">Operator register</CardTitle></CardHeader>
               <CardContent className="overflow-x-auto">

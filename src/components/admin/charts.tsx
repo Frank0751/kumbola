@@ -75,6 +75,53 @@ export function BarList({ items, unit = 't' }: { items: { label: string; value: 
   )
 }
 
+export function MiniBars({
+  data,
+  unit = '',
+  colorClass = 'fill-primary',
+}: {
+  data: { date: string; value: number }[]
+  unit?: string
+  colorClass?: string
+}) {
+  const W = 640
+  const H = 180
+  const PADX = 10
+  const PADY = 22
+  const max = Math.max(1, ...data.map((d) => d.value))
+  const n = Math.max(1, data.length)
+  const slot = (W - PADX * 2) / n
+  const bw = Math.max(6, slot * 0.55)
+  const x = (i: number) => PADX + slot * i + (slot - bw) / 2
+  const h = (v: number) => (v / max) * (H - PADY * 2)
+  const y = (v: number) => H - PADY - h(v)
+
+  return (
+    <div className="w-full overflow-x-auto scroll-slim">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-40 w-full min-w-[420px]" role="img" aria-label="Daily series bar chart">
+        {[0, 1].map((f) => (
+          <line key={f} x1={PADX} x2={W - PADX} y1={PADY + f * (H - PADY * 2)} y2={PADY + f * (H - PADY * 2)} className="stroke-border" strokeDasharray="3 4" />
+        ))}
+        {data.map((d, i) => (
+          <g key={d.date}>
+            <rect x={x(i)} y={y(d.value)} width={bw} height={Math.max(2, h(d.value))} rx={3} className={colorClass} opacity={d.value === 0 ? 0.25 : 1} />
+            {i % 2 === 0 && (
+              <text x={x(i) + bw / 2} y={H - 6} textAnchor="middle" className="fill-muted-foreground" style={{ fontSize: 9 }}>
+                {d.date.slice(5)}
+              </text>
+            )}
+          </g>
+        ))}
+      </svg>
+      {unit && (
+        <p className="text-xs text-muted-foreground">
+          Peak {max.toLocaleString('en-GH', { maximumFractionDigits: 1 })} {unit} / day
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function Donut({ slices }: { slices: { label: string; value: number; color: string }[] }) {
   const total = slices.reduce((s, x) => s + x.value, 0) || 1
   const R = 42
