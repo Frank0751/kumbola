@@ -117,7 +117,9 @@ export function AdminApp({
       try {
         const res = await api<{ jobs: Booking[]; people: SearchPerson[] }>(`/api/admin/search?q=${encodeURIComponent(q)}`)
         setResults(res)
-        setSearchOpen(true)
+        // pop the panel only while the search box still has focus — a late
+        // response must not override Escape or a click-away dismissal
+        if (document.activeElement === searchRef.current) setSearchOpen(true)
       } catch {
         /* transient */
       }
