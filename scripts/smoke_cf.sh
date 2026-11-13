@@ -34,7 +34,8 @@ ACCESS=$(python3 - <<'PY'
 import json
 try:
     d = json.load(open('/tmp/cf_auth.json'))
-    at = d.get('access_token') or ''
+    # /api/auth returns {session: {access_token, ...}, user: {...}} — accept both shapes
+    at = d.get('access_token') or (d.get('session') or {}).get('access_token') or ''
     print(at)
 except Exception:
     print('')
@@ -43,9 +44,11 @@ PY
 python3 - <<'PY'
 import json
 d = json.load(open('/tmp/cf_auth.json'))
+s = d.get('session') or {}
+u = d.get('user') or s.get('user') or {}
 print("keys:", sorted(d.keys()))
-print("user email:", (d.get('user') or {}).get('email'))
-print("expires_in:", d.get('expires_in'))
+print("user email:", u.get('email'))
+print("has access_token:", bool(d.get('access_token') or s.get('access_token')))
 print("error:", d.get('error') or d.get('msg') or 'none')
 PY
 
