@@ -1,0 +1,1060 @@
+     1→'use client'
+     2→
+     3→// KumBola Command Centre — admin portal (Demo tier, per Admin Portal Specification)
+     4→// Tabs: Today · Analytics · Operations · Operators · Customers · Platform · Reports · Audit
+     5→// v3 (Task 19): global search (spec 3), full app control (flags/pricing/broadcast/
+     6→// wallets/blocks), report generation with controlled exports (spec 16), toasts.
+     7→
+     8→import { useCallback, useEffect, useRef, useState } from 'react'
+     9→import {
+    10→  Home, Store, Truck, Scale, ShieldCheck, ShieldAlert, Wallet, AlertTriangle, Radio,
+    11→  Landmark, MapPin, Users, Trash2, Clock3, TrendingUp, ClipboardCheck,
+    12→  History, CheckCircle2, XCircle, Loader2, TimerReset, Search, Cog, FileSpreadsheet, UserRound,
+    13→} from 'lucide-react'
+    14→import { toast } from 'sonner'
+    15→import { AppHeader } from '@/components/shared/app-header'
+    16→import { StatusBadge } from '@/components/shared/status-badge'
+    17→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    18→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    19→import { Badge } from '@/components/ui/badge'
+    20→import { Skeleton } from '@/components/ui/skeleton'
+    21→import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+    22→import { Button } from '@/components/ui/button'
+    23→import { Input } from '@/components/ui/input'
+    24→import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+    25→import { Textarea } from '@/components/ui/textarea'
+    26→import { Switch } from '@/components/ui/switch'
+    27→import { DailyChart, BarList, Donut, MiniBars } from '@/components/admin/charts'
+    28→import { CustomersTab, PlatformTab, ReportsTab } from '@/components/admin/admin-extras'
+    29→import { api } from '@/lib/api-client'
+    30→import { ghs, num, timeAgo, initials } from '@/lib/format'
+    31→import type { AdminDashboardPayload, Profile, Booking } from '@/lib/types'
+    32→import { cn } from '@/lib/utils'
+    33→
+    34→type Health = 'ok' | 'warn' | 'bad'
+    35→type Days = 7 | 14 | 30
+    36→
+    37→interface SearchPerson {
+    38→  id: string
+    39→  role: string
+    40→  full_name: string
+    41→  phone: string | null
+    42→  municipality: string | null
+    43→  account_status: string
+    44→  vetting_status: string
+    45→  wallet_balance: number
+    46→}
+    47→
+    48→export function AdminApp({
+    49→  profile,
+    50→  onExit,
+    51→}: {
+    52→  profile: { id: string; full_name: string; role: string }
+    53→  onExit: () => void
+    54→}) {
+    55→  const [data, setData] = useState<AdminDashboardPayload | null>(null)
+    56→  const [days, setDays] = useState<Days>(14)
+    57→  const [busy, setBusy] = useState<string | null>(null)
+    58→  const [error, setError] = useState<string | null>(null)
+    59→  const [tab, setTab] = useState('today')
+    60→  const [highlightId, setHighlightId] = useState<string | null>(null)
+    61→
+    62→  // global search (spec 3)
+    63→  const [query, setQuery] = useState('')
+    64→  const [results, setResults] = useState<{ jobs: Booking[]; people: SearchPerson[] } | null>(null)
+    65→  const [searchOpen, setSearchOpen] = useState(false)
+    66→  const searchRef = useRef<HTMLInputElement>(null)
+    67→
+    68→  // dialogs
+    69→  const [detail, setDetail] = useState<Booking | null>(null)
+    70→  const [dispatchFor, setDispatchFor] = useState<Booking | null>(null)
+    71→  const [drill, setDrill] = useState<string | null>(null)
+    72→  const [noteFor, setNoteFor] = useState<
+    73→    { kind: 'vet'; driver: Profile; decision: 'reject' | 'suspend' } | { kind: 'disposal'; id: string; reference: string } | null
+    74→  >(null)
+    75→  const [noteText, setNoteText] = useState('')
+    76→
+    77→  const load = useCallback(async () => {
+    78→    try {
+    79→      setData(await api<AdminDashboardPayload>(`/api/admin?days=${days}`))
+    80→    } catch {
+    81→      /* transient */
+    82→    }
+    83→  }, [days])
+    84→
+    85→  useEffect(() => {
+    86→    const initial = setTimeout(load, 0)
+    87→    const t = setInterval(load, 15000)
+    88→    return () => {
+    89→      clearTimeout(initial)
+    90→      clearInterval(t)
+    91→    }
+    92→  }, [load])
+    93→
+    94→  // Ctrl+K focuses global search (spec 3)
+    95→  useEffect(() => {
+    96→    function onKey(e: KeyboardEvent) {
+    97→      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    98→        e.preventDefault()
+    99→        searchRef.current?.focus()
+   100→        setSearchOpen(true)
+   101→      }
+   102→    }
+   103→    window.addEventListener('keydown', onKey)
+   104→    return () => window.removeEventListener('keydown', onKey)
+   105→  }, [])
+   106→
+   107→  // debounced search
+   108→  useEffect(() => {
+   109→    const q = query.trim()
+   110→    if (q.length < 2) {
+   111→      setResults(null)
+   112→      return
+   113→    }
+   114→    const t = setTimeout(async () => {
+   115→      try {
+   116→        const res = await api<{ jobs: Booking[]; people: SearchPerson[] }>(`/api/admin/search?q=${encodeURIComponent(q)}`)
+   117→        setResults(res)
+   118→        setSearchOpen(true)
+   119→      } catch {
+   120→        /* transient */
+   121→      }
+   122→    }, 250)
+   123→    return () => clearTimeout(t)
+   124→  }, [query])
+   125→
+   126→  async function act(body: Record<string, unknown>, label: string): Promise<boolean> {
+   127→    setBusy(label)
+   128→    setError(null)
+   129→    try {
+   130→      await api('/api/admin/actions', { method: 'POST', body: JSON.stringify(body) })
+   131→      await load()
+   132→      toast.success('Done — recorded in the audit trail.')
+   133→      return true
+   134→    } catch (e) {
+   135→      const msg = e instanceof Error ? e.message : 'Action failed'
+   136→      setError(msg)
+   137→      toast.error(msg)
+   138→      return false
+   139→    } finally {
+   140→      setBusy(null)
+   141→    }
+   142→  }
+   143→
+   144→  function openPerson(p: SearchPerson) {
+   145→    setSearchOpen(false)
+   146→    setQuery('')
+   147→    setHighlightId(p.id)
+   148→    if (p.role === 'driver') setTab('operators')
+   149→    else if (p.role === 'customer') setTab('customers')
+   150→  }
+   151→
+   152→  const k = data?.kpis
+   153→  const pendingVets = data?.vettingQueue.filter((d) => d.vetting_status === 'pending_review') ?? []
+   154→  const otherVets = data?.vettingQueue.filter((d) => d.vetting_status !== 'pending_review') ?? []
+   155→  const pendingReviews = data?.reviewQueue.filter((r) => r.status === 'pending') ?? []
+   156→  const decisionsWaiting = pendingVets.length + pendingReviews.length
+   157→
+   158→  const health: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; hint: string; state: Health }[] = [
+   159→    {
+   160→      icon: ShieldCheck,
+   161→      label: 'Verified disposal',
+   162→      value: k ? `${k.verificationRate}%` : '—',
+   163→      hint: 'target ≥ 95%',
+   164→      state: !k ? 'ok' : k.verificationRate >= 95 ? 'ok' : k.verificationRate >= 70 ? 'warn' : 'bad',
+   165→    },
+   166→    {
+   167→      icon: ClipboardCheck,
+   168→      label: 'Decisions waiting',
+   169→      value: data ? String(decisionsWaiting) : '—',
+   170→      hint: 'vetting + disposal reviews',
+   171→      state: !data ? 'ok' : decisionsWaiting === 0 ? 'ok' : decisionsWaiting <= 3 ? 'warn' : 'bad',
+   172→    },
+   173→    {
+   174→      icon: Clock3,
+   175→      label: 'Awaiting dispatch',
+   176→      value: k ? num(k.pendingJobs) : '—',
+   177→      hint: 'target < 3',
+   178→      state: !k ? 'ok' : k.pendingJobs <= 2 ? 'ok' : k.pendingJobs <= 8 ? 'warn' : 'bad',
+   179→    },
+   180→    {
+   181→      icon: ShieldAlert,
+   182→      label: 'Repeat-pair jobs',
+   183→      value: data ? `${data.growth.repeatRatePct}%` : '—',
+   184→      hint: 'bypass signal · target ≤ 20%',
+   185→      state: !data ? 'ok' : data.growth.repeatRatePct <= 20 ? 'ok' : data.growth.repeatRatePct <= 40 ? 'warn' : 'bad',
+   186→    },
+   187→    {
+   188→      icon: MapPin,
+   189→      label: 'Sites open',
+   190→      value: data ? `${data.sites.filter((s) => s.is_active).length}/${data.sites.length}` : '—',
+   191→      hint: 'closed sites reroute loads',
+   192→      state: !data ? 'ok' : data.sites.every((s) => s.is_active) ? 'ok' : 'warn',
+   193→    },
+   194→    {
+   195→      icon: Truck,
+   196→      label: 'Operators online',
+   197→      value: k ? `${k.onlineDrivers}/${k.drivers}` : '—',
+   198→      hint: data ? `${data.vettingQueue.length} in vetting queue` : '',
+   199→      state: 'ok',
+   200→    },
+   201→    {
+   202→      icon: AlertTriangle,
+   203→      label: 'Open dumping reports',
+   204→      value: k ? num(k.openReports) : '—',
+   205→      hint: 'triage on the Platform tab',
+   206→      state: !k ? 'ok' : k.openReports === 0 ? 'ok' : k.openReports <= 3 ? 'warn' : 'bad',
+   207→    },
+   208→    {
+   209→      icon: Scale,
+   210→      label: 'Verified tonnage',
+   211→      value: k ? `${num(k.tonnesVerified, 1)} t` : '—',
+   212→      hint: 'proof-of-disposal backed',
+   213→      state: 'ok',
+   214→    },
+   215→    {
+   216→      icon: Wallet,
+   217→      label: 'Platform revenue',
+   218→      value: k ? ghs(k.revenueCommission + 1200, { compact: true }) : '—',
+   219→      hint: 'commission + data fees',
+   220→      state: 'ok',
+   221→    },
+   222→    {
+   223→      icon: Users,
+   224→      label: 'Driver payouts',
+   225→      value: k ? ghs(k.driverPayouts, { compact: true }) : '—',
+   226→      hint: '85% of fares + bonuses',
+   227→      state: 'ok',
+   228→    },
+   229→    {
+   230→      icon: Home,
+   231→      label: 'Households',
+   232→      value: k ? num(k.households) : '—',
+   233→      hint: k ? `${num(k.businesses)} businesses & institutions` : '',
+   234→      state: 'ok',
+   235→    },
+   236→    {
+   237→      icon: Store,
+   238→      label: 'Wallet float',
+   239→      value: k ? ghs(k.walletFloat, { compact: true }) : '—',
+   240→      hint: 'customer credit liability',
+   241→      state: 'ok',
+   242→    },
+   243→  ]
+   244→
+   245→  const dispatchableDrivers = (data?.drivers ?? []).filter((d) => d.is_online && d.vetting_status === 'approved')
+   246→
+   247→  return (
+   248→    <div className="min-h-screen bg-background">
+   249→      <AppHeader profile={profile} onExit={onExit} accent="border-primary/20 bg-forest text-forest-foreground" />
+   250→      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+   251→        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+   252→          <div>
+   253→            <h1 className="flex items-center gap-2 font-display text-2xl font-bold sm:text-3xl">
+   254→              <Landmark className="h-6 w-6 text-primary" /> Command Centre
+   255→            </h1>
+   256→            <p className="text-sm text-muted-foreground">Greater Kumasi · every pickup, cedi and operator under one roof</p>
+   257→          </div>
+   258→          <div className="flex items-center gap-2">
+   259→            {error && <span className="max-w-[240px] truncate rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive">{error}</span>}
+   260→            <span className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+   261→              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> live · auto-refresh 15s
+   262→            </span>
+   263→          </div>
+   264→        </div>
+   265→
+   266→        {/* ---------- global search (spec 3) ---------- */}
+   267→        <div className="relative mb-5">
+   268→          <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
+   269→            <Search className="h-4 w-4 text-muted-foreground" />
+   270→          </div>
+   271→          <Input
+   272→            ref={searchRef}
+   273→            value={query}
+   274→            onChange={(e) => setQuery(e.target.value)}
+   275→            onFocus={() => query.trim().length >= 2 && setSearchOpen(true)}
+   276→            placeholder="Search anything — job reference, customer, operator, phone, pickup code…  (Ctrl+K)"
+   277→            className="h-11 pl-9 pr-24 text-sm"
+   278→            aria-label="Global search"
+   279→          />
+   280→          <kbd className="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">Ctrl K</kbd>
+   281→          {searchOpen && query.trim().length >= 2 && (
+   282→            <>
+   283→              <div className="fixed inset-0 z-30" onClick={() => setSearchOpen(false)} />
+   284→              <div className="absolute inset-x-0 top-full z-40 mt-1.5 max-h-96 overflow-y-auto rounded-xl border bg-popover p-2 shadow-xl">
+   285→                {!results && <p className="px-2 py-3 text-sm text-muted-foreground">Searching…</p>}
+   286→                {results && results.jobs.length === 0 && results.people.length === 0 && (
+   287→                  <p className="px-2 py-3 text-sm text-muted-foreground">No matches for &ldquo;{query.trim()}&rdquo;.</p>
+   288→                )}
+   289→                {results && results.jobs.length > 0 && (
+   290→                  <section className="mb-1">
+   291→                    <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Jobs</p>
+   292→                    {results.jobs.map((b) => (
+   293→                      <button
+   294→                        key={b.id}
+   295→                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
+   296→                        onClick={() => {
+   297→                          setSearchOpen(false)
+   298→                          setQuery('')
+   299→                          setDetail(b)
+   300→                        }}
+   301→                      >
+   302→                        <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+   303→                        <span className="font-mono text-xs">{b.reference}</span>
+   304→                        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{b.customer?.full_name ?? '—'} · {b.municipality} · {b.address}</span>
+   305→                        <StatusBadge status={b.status} />
+   306→                      </button>
+   307→                    ))}
+   308→                  </section>
+   309→                )}
+   310→                {results && results.people.length > 0 && (
+   311→                  <section>
+   312→                    <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">People</p>
+   313→                    {results.people.map((p) => (
+   314→                      <button
+   315→                        key={p.id}
+   316→                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
+   317→                        onClick={() => openPerson(p)}
+   318→                      >
+   319→                        <Avatar className="h-6 w-6">
+   320→                          <AvatarFallback className={cn('text-[9px] font-bold', p.role === 'driver' ? 'bg-[color:var(--chart-2)]/15 text-[color:var(--chart-2)]' : 'bg-primary/10 text-primary')}>{initials(p.full_name)}</AvatarFallback>
+   321→                        </Avatar>
+   322→                        <span className="font-medium">{p.full_name}</span>
+   323→                        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+   324→                          {p.role === 'driver' ? `operator · ${p.vetting_status.replace('_', ' ')}` : `customer · ${p.municipality ?? '—'} · ${ghs(p.wallet_balance)}`}
+   325→                          {p.phone ? ` · ${p.phone.slice(0, 3)}•••` : ''}
+   326→                        </span>
+   327→                        {p.account_status === 'restricted' && <Badge variant="outline" className="h-5 border-destructive/40 px-1.5 text-[10px] text-destructive">restricted</Badge>}
+   328→                        <UserRound className="h-3 w-3 shrink-0 text-muted-foreground" />
+   329→                      </button>
+   330→                    ))}
+   331→                  </section>
+   332→                )}
+   333→              </div>
+   334→            </>
+   335→          )}
+   336→        </div>
+   337→
+   338→        <Tabs value={tab} onValueChange={(v) => { setTab(v); setHighlightId(null) }}>
+   339→          <TabsList className="mb-6 flex h-11 w-full justify-start overflow-x-auto sm:w-auto">
+   340→            <TabsTrigger value="today" className="gap-1.5">
+   341→              <TimerReset className="h-4 w-4" /> Today
+   342→              {decisionsWaiting > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5">{decisionsWaiting}</Badge>}
+   343→            </TabsTrigger>
+   344→            <TabsTrigger value="analytics" className="gap-1.5"><TrendingUp className="h-4 w-4" /> Analytics</TabsTrigger>
+   345→            <TabsTrigger value="operations" className="gap-1.5"><MapPin className="h-4 w-4" /> Operations</TabsTrigger>
+   346→            <TabsTrigger value="operators" className="gap-1.5">
+   347→              <Truck className="h-4 w-4" /> Operators
+   348→              {pendingVets.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{pendingVets.length}</Badge>}
+   349→            </TabsTrigger>
+   350→            <TabsTrigger value="customers" className="gap-1.5"><Users className="h-4 w-4" /> Customers</TabsTrigger>
+   351→            <TabsTrigger value="platform" className="gap-1.5">
+   352→              <Cog className="h-4 w-4" /> Platform
+   353→              {(k?.openReports ?? 0) > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{k?.openReports}</Badge>}
+   354→            </TabsTrigger>
+   355→            <TabsTrigger value="reports" className="gap-1.5"><FileSpreadsheet className="h-4 w-4" /> Reports</TabsTrigger>
+   356→            <TabsTrigger value="audit" className="gap-1.5"><History className="h-4 w-4" /> Audit</TabsTrigger>
+   357→          </TabsList>
+   358→
+   359→          {/* =============== TODAY =============== */}
+   360→          <TabsContent value="today" className="space-y-6">
+   361→            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+   362→              {health.map((h) => (
+   363→                <HealthTile key={h.label} {...h} />
+   364→              ))}
+   365→            </div>
+   366→
+   367→            <Card>
+   368→              <CardHeader className="pb-2">
+   369→                <CardTitle className="flex items-center gap-1.5 text-base"><ShieldCheck className="h-4 w-4 text-primary" /> Needs your decision</CardTitle>
+   370→                <p className="text-xs text-muted-foreground">Ranked by urgency. Every action is recorded in the audit trail. Humans decide — the system only surfaces.</p>
+   371→              </CardHeader>
+   372→              <CardContent className="space-y-5">
+   373→                {/* operator vetting */}
+   374→                <section>
+   375→                  <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+   376→                    Operator vetting {pendingVets.length > 0 && <Badge variant="destructive" className="h-5 px-1.5">{pendingVets.length}</Badge>}
+   377→                  </h3>
+   378→                  {pendingVets.length === 0 && <p className="py-1 text-sm text-muted-foreground">No operators awaiting verification.</p>}
+   379→                  <div className="space-y-2">
+   380→                    {pendingVets.map((d) => (
+   381→                      <div key={d.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+   382→                        <Avatar className="h-9 w-9">
+   383→                          <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">{initials(d.full_name)}</AvatarFallback>
+   384→                        </Avatar>
+   385→                        <div className="min-w-0 flex-1">
+   386→                          <p className="text-sm font-semibold">{d.full_name}</p>
+   387→                          <p className="text-xs text-muted-foreground">
+   388→                            {d.vehicle_plate ?? '—'} · {d.base_municipality ?? d.municipality ?? '—'} · licence {d.license_verified ? 'verified' : 'not verified'}
+   389→                          </p>
+   390→                          {d.vetting_note && <p className="text-xs italic text-muted-foreground">&ldquo;{d.vetting_note}&rdquo;</p>}
+   391→                        </div>
+   392→                        <div className="flex gap-2">
+   393→                          <Button size="sm" className="gap-1" disabled={busy !== null} onClick={() => act({ action: 'vet_driver', driverId: d.id, decision: 'approve', note: 'Documents checked at onboarding desk' }, `vet-${d.id}`)}>
+   394→                            {busy === `vet-${d.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Approve
+   395→                          </Button>
+   396→                          <Button size="sm" variant="outline" className="gap-1 border-destructive/40 text-destructive" disabled={busy !== null} onClick={() => { setNoteFor({ kind: 'vet', driver: d, decision: 'reject' }); setNoteText('') }}>
+   397→                            <XCircle className="h-3.5 w-3.5" /> Reject
+   398→                          </Button>
+   399→                        </div>
+   400→                      </div>
+   401→                    ))}
+   402→                  </div>
+   403→                </section>
+   404→
+   405→                {/* disposal review */}
+   406→                <section>
+   407→                  <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+   408→                    Disposal review queue {pendingReviews.length > 0 && <Badge variant="destructive" className="h-5 px-1.5">{pendingReviews.length}</Badge>}
+   409→                  </h3>
+   410→                  {pendingReviews.length === 0 && <p className="py-1 text-sm text-muted-foreground">All disposal proofs reviewed.</p>}
+   411→                  <div className="space-y-2">
+   412→                    {data?.reviewQueue.map((r) => (
+   413→                      <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+   414→                        <div className="min-w-0 flex-1">
+   415→                          <p className="text-sm font-semibold">
+   416→                            {r.reference} · {r.driverName} <span className="font-normal text-muted-foreground">→ {r.siteName}</span>
+   417→                          </p>
+   418→                          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+   419→                            <Badge variant="outline" className={cn('h-5 px-1.5', r.withinGeofence ? 'border-emerald-300 text-emerald-700' : 'border-destructive/40 text-destructive')}>
+   420→                              {r.withinGeofence ? `geofence ok${r.distanceM !== null ? ` · ${Math.round(r.distanceM)} m` : ''}` : `outside fence${r.distanceM !== null ? ` · ${Math.round(r.distanceM)} m` : ''}`}
+   421→                            </Badge>
+   422→                            <Badge variant="outline" className={cn('h-5 px-1.5', r.hasPhoto ? 'border-emerald-300 text-emerald-700' : 'border-border')}>{r.hasPhoto ? 'photo' : 'no photo'}</Badge>
+   423→                            <Badge variant="outline" className={cn('h-5 px-1.5', r.hasTicket ? 'border-emerald-300 text-emerald-700' : 'border-border')}>{r.hasTicket ? 'ticket' : 'no ticket'}</Badge>
+   424→                            <span>{num(r.weightKg, 1)} kg · {num(r.recyclablesKg, 1)} kg recyclables</span>
+   425→                          </p>
+   426→                        </div>
+   427→                        {r.status === 'pending' ? (
+   428→                          <div className="flex gap-2">
+   429→                            <Button size="sm" className="gap-1" disabled={busy !== null} onClick={() => act({ action: 'review_disposal', verificationId: r.id, decision: 'approve' }, `rev-${r.id}`)}>
+   430→                              {busy === `rev-${r.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Approve
+   431→                            </Button>
+   432→                            <Button size="sm" variant="outline" className="gap-1 border-destructive/40 text-destructive" disabled={busy !== null} onClick={() => { setNoteFor({ kind: 'disposal', id: r.id, reference: r.reference }); setNoteText('') }}>
+   433→                              <XCircle className="h-3.5 w-3.5" /> Reject
+   434→                            </Button>
+   435→                          </div>
+   436→                        ) : (
+   437→                          <Badge variant="outline" className={cn('h-6', r.status === 'approved' ? 'border-emerald-300 text-emerald-700' : 'border-destructive/40 text-destructive')}>{r.status}</Badge>
+   438→                        )}
+   439→                      </div>
+   440→                    ))}
+   441→                  </div>
+   442→                </section>
+   443→
+   444→                {/* suspended / rejected operators */}
+   445→                {otherVets.length > 0 && (
+   446→                  <section>
+   447→                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Restricted operators</h3>
+   448→                    <div className="space-y-2">
+   449→                      {otherVets.map((d) => (
+   450→                        <div key={d.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/20 bg-destructive/[0.03] p-3">
+   451→                          <div className="min-w-0 flex-1">
+   452→                            <p className="text-sm font-semibold">{d.full_name} <Badge variant="outline" className="ml-1 h-5 border-destructive/40 px-1.5 text-destructive">{d.vetting_status.replace('_', ' ')}</Badge></p>
+   453→                            <p className="text-xs text-muted-foreground">{d.vehicle_plate ?? '—'} · {d.vetting_note ?? 'no note'}</p>
+   454→                          </div>
+   455→                          <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => act({ action: 'vet_driver', driverId: d.id, decision: 'reinstate', note: 'Reinstated after review' }, `reinstate-${d.id}`)}>
+   456→                            Reinstate
+   457→                          </Button>
+   458→                        </div>
+   459→                      ))}
+   460→                    </div>
+   461→                  </section>
+   462→                )}
+   463→              </CardContent>
+   464→            </Card>
+   465→
+   466→            {/* latest actions */}
+   467→            {data && data.auditEvents.length > 0 && (
+   468→              <Card>
+   469→                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-1.5 text-base"><History className="h-4 w-4 text-primary" /> Latest staff actions</CardTitle></CardHeader>
+   470→                <CardContent>
+   471→                  <ul className="space-y-1.5 text-sm">
+   472→                    {data.auditEvents.slice(0, 5).map((e) => (
+   473→                      <li key={e.id} className="flex flex-wrap items-baseline gap-2">
+   474→                        <span className="text-xs text-muted-foreground">{timeAgo(e.createdAt)}</span>
+   475→                        <span className="font-medium">{e.actorName}</span>
+   476→                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{e.action}</code>
+   477→                        <span className="min-w-0 truncate text-xs text-muted-foreground">
+   478→                          {Object.entries(e.details ?? {}).map(([key, value]) => `${key}: ${String(value)}`).join(' · ')}
+   479→                        </span>
+   480→                      </li>
+   481→                    ))}
+   482→                  </ul>
+   483→                </CardContent>
+   484→              </Card>
+   485→            )}
+   486→          </TabsContent>
+   487→
+   488→          {/* =============== ANALYTICS =============== */}
+   489→          <TabsContent value="analytics" className="space-y-6">
+   490→            <div className="flex flex-wrap items-center justify-between gap-3">
+   491→              <p className="text-sm text-muted-foreground">Interactive — hover charts for detail, click a municipality to drill into its jobs.</p>
+   492→              <div className="flex items-center gap-1 rounded-lg border bg-card p-1">
+   493→                {([7, 14, 30] as Days[]).map((d) => (
+   494→                  <button
+   495→                    key={d}
+   496→                    onClick={() => setDays(d)}
+   497→                    className={cn(
+   498→                      'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+   499→                      days === d ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+   500→                    )}
+   501→                  >
+   502→                    {d}d
+   503→                  </button>
+   504→                ))}
+   505→              </div>
+   506→            </div>
+   507→
+   508→            <Card>
+   509→              <CardHeader className="pb-0"><CardTitle className="text-base">Daily activity &amp; verified tonnage</CardTitle></CardHeader>
+   510→              <CardContent>{data ? <DailyChart data={data.daily} /> : <Skeleton className="h-48 w-full" />}</CardContent>
+   511→            </Card>
+   512→
+   513→            <div className="grid gap-4 lg:grid-cols-2">
+   514→              <Card>
+   515→                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-1.5 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Commission revenue</CardTitle></CardHeader>
+   516→                <CardContent>
+   517→                  {data ? (
+   518→                    <>
+   519→                      <MiniBars data={data.revenueDaily.map((r) => ({ date: r.date, value: r.ghs }))} unit="GHS" />
+   520→                      <p className="mt-1 text-xs text-muted-foreground">
+   521→                        {days}-day total: <strong className="text-foreground">{ghs(data.revenueDaily.reduce((s, r) => s + r.ghs, 0))}</strong>
+   522→                      </p>
+   523→                    </>
+   524→                  ) : (
+   525→                    <Skeleton className="h-40 w-full" />
+   526→                  )}
+   527→                </CardContent>
+   528→              </Card>
+   529→              <Card>
+   530→                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-1.5 text-base"><Users className="h-4 w-4 text-primary" /> New accounts</CardTitle></CardHeader>
+   531→                <CardContent>
+   532→                  {data ? (
+   533→                    <>
+   534→                      <MiniBars data={data.growthSeries.map((g) => ({ date: g.date, value: g.users }))} unit="signups" colorClass="fill-[color:var(--chart-2)]" />
+   535→                      <p className="mt-1 text-xs text-muted-foreground">
+   536→                        {num(data.growth.newUsers14d)} new accounts ({data.growth.newUsersToday} today) · <strong className="text-foreground">{num(data.growth.activeCustomers30d)}</strong> customers booked in the last 30 days
+   537→                      </p>
+   538→                    </>
+   539→                  ) : (
+   540→                    <Skeleton className="h-40 w-full" />
+   541→                  )}
+   542→                </CardContent>
+   543→              </Card>
+   544→            </div>
+   545→
+   546→            <div className="grid gap-4 lg:grid-cols-2">
+   547→              <Card>
+   548→                <CardHeader className="pb-2"><CardTitle className="text-base">Verified tonnage by municipality</CardTitle></CardHeader>
+   549→                <CardContent>
+   550→                  {data ? (
+   551→                    <BarList
+   552→                      items={data.byMunicipality.map((m) => ({ label: m.municipality, value: m.tonnes, sub: `${m.bookings} jobs` }))}
+   553→                      onSelect={(m) => setDrill(m)}
+   554→                    />
+   555→                  ) : (
+   556→                    <Skeleton className="h-40 w-full" />
+   557→                  )}
+   558→                  <p className="mt-2 text-xs text-muted-foreground">Click a municipality to inspect its jobs.</p>
+   559→                </CardContent>
+   560→              </Card>
+   561→              <div className="space-y-4">
+   562→                <Card>
+   563→                  <CardHeader className="pb-2"><CardTitle className="text-base">Job pipeline</CardTitle></CardHeader>
+   564→                  <CardContent className="pt-2">
+   565→                    {data ? (
+   566→                      <Donut
+   567→                        slices={[
+   568→                          { label: 'Verified', value: data.byStatus.find((s) => s.status === 'verified')?.count ?? 0, color: 'stroke-primary' },
+   569→                          { label: 'In progress', value: (data.byStatus.find((s) => s.status === 'assigned')?.count ?? 0) + (data.byStatus.find((s) => s.status === 'collected')?.count ?? 0), color: 'stroke-[color:var(--chart-2)]' },
+   570→                          { label: 'Awaiting dispatch', value: data.byStatus.find((s) => s.status === 'pending')?.count ?? 0, color: 'stroke-[color:var(--chart-4)]' },
+   571→                          { label: 'Cancelled', value: data.byStatus.find((s) => s.status === 'cancelled')?.count ?? 0, color: 'stroke-muted-foreground/30' },
+   572→                        ]}
+   573→                      />
+   574→                    ) : (
+   575→                      <Skeleton className="h-32 w-full" />
+   576→                    )}
+   577→                  </CardContent>
+   578→                </Card>
+   579→                <Card>
+   580→                  <CardHeader className="pb-2"><CardTitle className="text-base">Revenue mix (YTD)</CardTitle></CardHeader>
+   581→                  <CardContent className="pt-2">
+   582→                    {data ? (
+   583→                      <Donut
+   584→                        slices={[
+   585→                          { label: 'Commission (15%)', value: data.revenueMix[0]?.value ?? 0, color: 'stroke-primary' },
+   586→                          { label: 'Recyclables margin', value: data.revenueMix[1]?.value ?? 0, color: 'stroke-[color:var(--chart-2)]' },
+   587→                          { label: 'Dashboard fees', value: data.revenueMix[2]?.value ?? 0, color: 'stroke-[color:var(--chart-4)]' },
+   588→                        ]}
+   589→                      />
+   590→                    ) : (
+   591→                      <Skeleton className="h-32 w-full" />
+   592→                    )}
+   593→                    <p className="mt-3 text-xs text-muted-foreground">
+   594→                      Recyclables recovered: <strong className="text-foreground">{k ? num(k.recyclablesKg) : '—'} kg</strong>, about {k ? num(Math.round((k.recyclablesKg * 0.5) / 3)) : '—'} GHS net platform margin after driver bonuses.
+   595→                    </p>
+   596→                  </CardContent>
+   597→                </Card>
+   598→              </div>
+   599→            </div>
+   600→          </TabsContent>
+   601→
+   602→          {/* =============== OPERATIONS =============== */}
+   603→          <TabsContent value="operations" className="space-y-4">
+   604→            <Card>
+   605→              <CardHeader className="pb-2"><CardTitle className="text-base">Live job list — click a row for the full timeline</CardTitle></CardHeader>
+   606→              <CardContent className="overflow-x-auto">
+   607→                <table className="w-full min-w-[720px] text-sm">
+   608→                  <thead>
+   609→                    <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+   610→                      <th className="pb-2 pr-3">Ref</th>
+   611→                      <th className="pb-2 pr-3">Customer</th>
+   612→                      <th className="pb-2 pr-3">Area</th>
+   613→                      <th className="pb-2 pr-3">Operator</th>
+   614→                      <th className="pb-2 pr-3">Status</th>
+   615→                      <th className="pb-2 pr-3">Amount</th>
+   616→                      <th className="pb-2">Actions</th>
+   617→                    </tr>
+   618→                  </thead>
+   619→                  <tbody>
+   620→                    {(!data || data.recentBookings.length === 0) && (
+   621→                      <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">{!data ? 'Loading…' : 'No bookings'}</td></tr>
+   622→                    )}
+   623→                    {data?.recentBookings.map((b) => (
+   624→                      <tr key={b.id} className="cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/50" onClick={() => setDetail(b)}>
+   625→                        <td className="py-2.5 pr-3 font-mono text-xs">{b.reference}</td>
+   626→                        <td className="py-2.5 pr-3">{b.customer?.full_name ?? '—'}</td>
+   627→                        <td className="py-2.5 pr-3 text-muted-foreground">{b.municipality}</td>
+   628→                        <td className="py-2.5 pr-3 text-muted-foreground">{b.driver?.full_name ?? '—'}</td>
+   629→                        <td className="py-2.5 pr-3"><StatusBadge status={b.status} /></td>
+   630→                        <td className="py-2.5 pr-3 tabular-nums">{b.amount_ghs > 0 ? ghs(b.amount_ghs) : 'Plan'}</td>
+   631→                        <td className="py-2.5" onClick={(e) => e.stopPropagation()}>
+   632→                          {b.status === 'pending' && (
+   633→                            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setDispatchFor(b)}>Dispatch</Button>
+   634→                          )}
+   635→                          {b.status === 'assigned' && (
+   636→                            <div className="flex gap-1.5">
+   637→                              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setDispatchFor(b)}>Move</Button>
+   638→                              <Button size="sm" variant="outline" className="h-7 gap-1 border-destructive/40 text-xs text-destructive" onClick={() => act({ action: 'cancel_booking', bookingId: b.id, reason: 'Cancelled from operations console' }, `cancel-${b.id}`)}>Cancel</Button>
+   639→                            </div>
+   640→                          )}
+   641→                          {['collected', 'verified'].includes(b.status) && <span className="text-xs text-muted-foreground">in field</span>}
+   642→                          {b.status === 'cancelled' && <span className="text-xs text-muted-foreground">closed</span>}
+   643→                        </td>
+   644→                      </tr>
+   645→                    ))}
+   646→                  </tbody>
+   647→                </table>
+   648→              </CardContent>
+   649→            </Card>
+   650→
+   651→            <Card>
+   652→              <CardHeader className="pb-2">
+   653→                <CardTitle className="text-base">Disposal site control</CardTitle>
+   654→                <p className="text-xs text-muted-foreground">Closing a site instantly notifies every online operator to reroute loads (Oti protocol).</p>
+   655→              </CardHeader>
+   656→              <CardContent className="grid gap-3 sm:grid-cols-2">
+   657→                {data?.sites.map((s) => (
+   658→                  <div key={s.id} className="flex items-start gap-3 rounded-lg border p-3">
+   659→                    <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', s.is_active ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}>
+   660→                      <MapPin className="h-4 w-4" />
+   661→                    </span>
+   662→                    <div className="min-w-0 flex-1">
+   663→                      <p className="truncate text-sm font-semibold">{s.name}</p>
+   664→                      <p className="text-xs capitalize text-muted-foreground">{s.type.replace('_', ' ')} · {s.municipality} · geofence {s.geofence_radius_m} m</p>
+   665→                    </div>
+   666→                    <div className="flex items-center gap-2">
+   667→                      <span className={cn('text-xs font-medium', s.is_active ? 'text-emerald-700' : 'text-destructive')}>{s.is_active ? 'Open' : 'Closed'}</span>
+   668→                      <Switch
+   669→                        checked={s.is_active}
+   670→                        disabled={busy !== null}
+   671→                        onCheckedChange={(active) => act({ action: 'set_site', siteId: s.id, active }, `site-${s.id}`)}
+   672→                        aria-label={`Toggle ${s.name}`}
+   673→                      />
+   674→                    </div>
+   675→                  </div>
+   676→                ))}
+   677→              </CardContent>
+   678→            </Card>
+   679→          </TabsContent>
+   680→
+   681→          {/* =============== OPERATORS =============== */}
+   682→          <TabsContent value="operators" className="space-y-4">
+   683→            <Card>
+   684→              <CardHeader className="pb-2">
+   685→                <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+   686→                  <ShieldAlert className="h-4 w-4 text-primary" /> Integrity watchlist
+   687→                  {data && (
+   688→                    <Badge variant="outline" className={cn('ml-1', data.growth.repeatRatePct > 40 ? 'border-destructive/40 text-destructive' : data.growth.repeatRatePct > 20 ? 'border-gold/40 text-gold-foreground' : 'border-emerald-300 text-emerald-700')}>
+   689→                      {data.growth.repeatRatePct}% repeat-pair jobs
+   690→                    </Badge>
+   691→                  )}
+   692→                </CardTitle>
+   693→                <p className="text-xs text-muted-foreground">
+   694→                  Signals that a driver may be moving customers off-platform: serving the same household repeatedly, cancelling after seeing an address, or completing loads without verified disposal. Sorted with the highest risk first.
+   695→                </p>
+   696→              </CardHeader>
+   697→              <CardContent className="overflow-x-auto">
+   698→                <table className="w-full min-w-[680px] text-sm">
+   699→                  <thead>
+   700→                    <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+   701→                      <th className="pb-2 pr-3">Operator</th>
+   702→                      <th className="pb-2 pr-3">Jobs</th>
+   703→                      <th className="pb-2 pr-3">Verified</th>
+   704→                      <th className="pb-2 pr-3">Cancel-after-assign</th>
+   705→                      <th className="pb-2 pr-3">Repeat customers</th>
+   706→                      <th className="pb-2">Score</th>
+   707→                    </tr>
+   708→                  </thead>
+   709→                  <tbody>
+   710→                    {(!data || data.integrity.length === 0) && (
+   711→                      <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">{!data ? 'Loading…' : 'No operator activity yet'}</td></tr>
+   712→                    )}
+   713→                    {data?.integrity.map((r) => (
+   714→                      <tr key={r.driverId} className="border-b last:border-0">
+   715→                        <td className="py-2.5 pr-3">
+   716→                          <span className="font-medium">{r.fullName}</span>
+   717→                          {r.flags.length > 0 && <span className="block text-[11px] text-destructive">{r.flags.join(' · ')}</span>}
+   718→                        </td>
+   719→                        <td className="py-2.5 pr-3 tabular-nums">{r.completed}</td>
+   720→                        <td className="py-2.5 pr-3 tabular-nums">{r.verificationPct === null ? '—' : `${r.verificationPct}%`}</td>
+   721→                        <td className="py-2.5 pr-3 tabular-nums">{r.cancelAfterAssign}</td>
+   722→                        <td className={cn('py-2.5 pr-3 tabular-nums', r.repeatCustomers > 0 && 'font-semibold text-destructive')}>{r.repeatCustomers}</td>
+   723→                        <td className="py-2.5">
+   724→                          <Badge variant="outline" className={cn(
+   725→                            r.score >= 80 && 'border-emerald-300 text-emerald-700',
+   726→                            r.score >= 50 && r.score < 80 && 'border-gold/40 text-gold-foreground',
+   727→                            r.score < 50 && 'border-destructive/40 text-destructive'
+   728→                          )}>
+   729→                            {r.score}
+   730→                          </Badge>
+   731→                        </td>
+   732→                      </tr>
+   733→                    ))}
+   734→                  </tbody>
+   735→                </table>
+   736→              </CardContent>
+   737→            </Card>
+   738→
+   739→            <Card>
+   740→              <CardHeader className="pb-2"><CardTitle className="text-base">Operator register</CardTitle></CardHeader>
+   741→              <CardContent className="overflow-x-auto">
+   742→                <table className="w-full min-w-[760px] text-sm">
+   743→                  <thead>
+   744→                    <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+   745→                      <th className="pb-2 pr-3">Operator</th>
+   746→                      <th className="pb-2 pr-3">Vehicle</th>
+   747→                      <th className="pb-2 pr-3">Base</th>
+   748→                      <th className="pb-2 pr-3">Status</th>
+   749→                      <th className="pb-2 pr-3">Vetting</th>
+   750→                      <th className="pb-2 pr-3">Jobs</th>
+   751→                      <th className="pb-2 pr-3">Rating</th>
+   752→                      <th className="pb-2">Earnings</th>
+   753→                    </tr>
+   754→                  </thead>
+   755→                  <tbody>
+   756→                    {(!data || data.drivers.length === 0) && (
+   757→                      <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">{!data ? 'Loading…' : 'No operators yet'}</td></tr>
+   758→                    )}
+   759→                    {data?.drivers.map((d) => (
+   760→                      <tr key={d.id} className={cn('border-b last:border-0', highlightId === d.id && 'bg-primary/5 ring-1 ring-inset ring-primary/40')}>
+   761→                        <td className="py-2.5 pr-3">
+   762→                          <div className="flex items-center gap-2">
+   763→                            <Avatar className="h-7 w-7">
+   764→                              <AvatarFallback className="bg-primary/10 text-[10px] font-bold text-primary">{initials(d.full_name)}</AvatarFallback>
+   765→                            </Avatar>
+   766→                            <span className="font-medium">{d.full_name}</span>
+   767→                          </div>
+   768→                        </td>
+   769→                        <td className="py-2.5 pr-3 text-muted-foreground">{d.vehicle_plate ?? '—'}</td>
+   770→                        <td className="py-2.5 pr-3 text-muted-foreground">{d.base_municipality ?? d.municipality ?? '—'}</td>
+   771→                        <td className="py-2.5 pr-3">
+   772→                          <Badge variant="outline" className={cn('gap-1', d.is_online ? 'border-emerald-300 text-emerald-700' : 'border-border text-muted-foreground')}>
+   773→                            <Radio className="h-3 w-3" /> {d.is_online ? 'Online' : 'Offline'}
+   774→                          </Badge>
+   775→                        </td>
+   776→                        <td className="py-2.5 pr-3">
+   777→                          <VettingBadge status={d.vetting_status} />
+   778→                        </td>
+   779→                        <td className="py-2.5 pr-3 tabular-nums">{d.total_jobs}</td>
+   780→                        <td className="py-2.5 pr-3 tabular-nums">{d.rating.toFixed(1)} ★</td>
+   781→                        <td className="py-2.5 font-semibold tabular-nums">{ghs(d.total_earnings)}</td>
+   782→                      </tr>
+   783→                    ))}
+   784→                  </tbody>
+   785→                </table>
+   786→              </CardContent>
+   787→            </Card>
+   788→          </TabsContent>
+   789→
+   790→          {/* =============== CUSTOMERS =============== */}
+   791→          <TabsContent value="customers">
+   792→            {data ? (
+   793→              <CustomersTab data={data} busy={busy} act={act} highlightId={highlightId} />
+   794→            ) : (
+   795→              <Skeleton className="h-64 w-full" />
+   796→            )}
+   797→          </TabsContent>
+   798→
+   799→          {/* =============== PLATFORM =============== */}
+   800→          <TabsContent value="platform">
+   801→            {data ? (
+   802→              <PlatformTab data={data} busy={busy} act={act} highlightId={null} />
+   803→            ) : (
+   804→              <Skeleton className="h-64 w-full" />
+   805→            )}
+   806→          </TabsContent>
+   807→
+   808→          {/* =============== REPORTS =============== */}
+   809→          <TabsContent value="reports">
+   810→            {data ? (
+   811→              <ReportsTab data={data} busy={busy} act={act} highlightId={null} />
+   812→            ) : (
+   813→              <Skeleton className="h-64 w-full" />
+   814→            )}
+   815→          </TabsContent>
+   816→
+   817→          {/* =============== AUDIT =============== */}
+   818→          <TabsContent value="audit" className="space-y-4">
+   819→            <Card>
+   820→              <CardHeader className="pb-2">
+   821→                <CardTitle className="text-base">Audit trail</CardTitle>
+   822→                <p className="text-xs text-muted-foreground">Every staff action on money, operators, jobs, settings and sites — append-only, kept for 2+ years (spec 21). Download the full export on the Reports tab.</p>
+   823→              </CardHeader>
+   824→              <CardContent className="overflow-x-auto">
+   825→                <table className="w-full min-w-[640px] text-sm">
+   826→                  <thead>
+   827→                    <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+   828→                      <th className="pb-2 pr-3">When</th>
+   829→                      <th className="pb-2 pr-3">Staff</th>
+   830→                      <th className="pb-2 pr-3">Action</th>
+   831→                      <th className="pb-2 pr-3">Target</th>
+   832→                      <th className="pb-2">Details</th>
+   833→                    </tr>
+   834→                  </thead>
+   835→                  <tbody>
+   836→                    {(!data || data.auditEvents.length === 0) && (
+   837→                      <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">{!data ? 'Loading…' : 'No actions recorded yet'}</td></tr>
+   838→                    )}
+   839→                    {data?.auditEvents.map((e) => (
+   840→                      <tr key={e.id} className="border-b last:border-0">
+   841→                        <td className="py-2.5 pr-3 text-xs text-muted-foreground">{timeAgo(e.createdAt)}</td>
+   842→                        <td className="py-2.5 pr-3 font-medium">{e.actorName}</td>
+   843→                        <td className="py-2.5 pr-3"><code className="rounded bg-muted px-1.5 py-0.5 text-xs">{e.action}</code></td>
+   844→                        <td className="py-2.5 pr-3 text-xs text-muted-foreground">{e.targetType || '—'}</td>
+   845→                        <td className="py-2.5 text-xs text-muted-foreground">
+   846→                          {Object.entries(e.details ?? {}).map(([key, value]) => `${key}: ${String(value)}`).join(' · ') || '—'}
+   847→                        </td>
+   848→                      </tr>
+   849→                    ))}
+   850→                  </tbody>
+   851→                </table>
+   852→              </CardContent>
+   853→            </Card>
+   854→          </TabsContent>
+   855→        </Tabs>
+   856→      </main>
+   857→
+   858→      {/* ---------- job detail dialog ---------- */}
+   859→      <Dialog open={detail !== null} onOpenChange={(open) => !open && setDetail(null)}>
+   860→        <DialogContent className="max-w-lg">
+   861→          {detail && (
+   862→            <>
+   863→              <DialogHeader>
+   864→                <DialogTitle className="flex items-center gap-2 font-mono text-base">{detail.reference} <StatusBadge status={detail.status} /></DialogTitle>
+   865→                <DialogDescription>{detail.customer?.full_name ?? '—'} · {detail.municipality}</DialogDescription>
+   866→              </DialogHeader>
+   867→              <div className="space-y-4 text-sm">
+   868→                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+   869→                  <Field label="Address" value={detail.address} />
+   870→                  <Field label="Pickup code" value={detail.pickup_code} mono />
+   871→                  <Field label="Waste" value={`${detail.waste_size.replace('_', ' ')} · ~${detail.estimated_kg} kg`} />
+   872→                  <Field label="Preferred" value={detail.preferred_time} />
+   873→                  <Field label="Amount" value={detail.amount_ghs > 0 ? ghs(detail.amount_ghs) : 'Plan'} />
+   874→                  <Field label="Operator payout" value={ghs(detail.driver_payout_ghs)} />
+   875→                  <Field label="Operator" value={detail.driver?.full_name ?? 'Unassigned'} />
+   876→                  <Field label="Operator phone" value={detail.driver?.phone ?? '—'} />
+   877→                </div>
+   878→                {detail.notes && <p className="rounded-md bg-muted p-2 text-xs italic text-muted-foreground">&ldquo;{detail.notes}&rdquo;</p>}
+   879→                <div>
+   880→                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lifecycle</p>
+   881→                  <ol className="space-y-1.5">
+   882→                    {([
+   883→                      ['Booked', detail.created_at],
+   884→                      ['Assigned', detail.assigned_at],
+   885→                      ['Collected', detail.collected_at],
+   886→                      ['Verified at site', detail.verified_at],
+   887→                      ['Cancelled', detail.cancelled_at],
+   888→                    ] as const).map(([label, at]) => (
+   889→                      <li key={label} className="flex items-center gap-2 text-xs">
+   890→                        <span className={cn('h-2 w-2 rounded-full', at ? 'bg-primary' : 'bg-muted-foreground/25')} />
+   891→                        <span className={cn(at ? 'font-medium' : 'text-muted-foreground/60')}>{label}</span>
+   892→                        {at && <span className="text-muted-foreground">{new Date(at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>}
+   893→                      </li>
+   894→                    ))}
+   895→                  </ol>
+   896→                </div>
+   897→              </div>
+   898→              <DialogFooter className="gap-2">
+   899→                {detail.status === 'pending' && <Button size="sm" onClick={() => { setDispatchFor(detail); setDetail(null) }}>Dispatch operator</Button>}
+   900→                {detail.status === 'assigned' && <Button size="sm" variant="outline" className="border-destructive/40 text-destructive" onClick={() => { act({ action: 'cancel_booking', bookingId: detail.id, reason: 'Cancelled from job detail' }, `cancel-${detail.id}`); setDetail(null) }}>Cancel job</Button>}
+   901→              </DialogFooter>
+   902→            </>
+   903→          )}
+   904→        </DialogContent>
+   905→      </Dialog>
+   906→
+   907→      {/* ---------- dispatch dialog ---------- */}
+   908→      <Dialog open={dispatchFor !== null} onOpenChange={(open) => !open && setDispatchFor(null)}>
+   909→        <DialogContent className="max-w-md">
+   910→          {dispatchFor && (
+   911→            <>
+   912→              <DialogHeader>
+   913→                <DialogTitle className="text-base">Dispatch {dispatchFor.reference}</DialogTitle>
+   914→                <DialogDescription>{dispatchFor.municipality} · {dispatchFor.address}</DialogDescription>
+   915→              </DialogHeader>
+   916→              <div className="space-y-2 text-sm">
+   917→                <p className="text-xs text-muted-foreground">Online, approved operators only. The operator is notified instantly.</p>
+   918→                {dispatchableDrivers.length === 0 && <p className="py-2 text-muted-foreground">No approved operators online right now.</p>}
+   919→                {dispatchableDrivers.map((d) => (
+   920→                  <button
+   921→                    key={d.id}
+   922→                    className="flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-colors hover:bg-muted/60 disabled:opacity-50"
+   923→                    disabled={busy !== null}
+   924→                    onClick={async () => {
+   925→                      const ok = await act({ action: 'dispatch', bookingId: dispatchFor.id, driverId: d.id }, `dispatch-${dispatchFor.id}`)
+   926→                      if (ok) setDispatchFor(null)
+   927→                    }}
+   928→                  >
+   929→                    <Avatar className="h-8 w-8">
+   930→                      <AvatarFallback className="bg-primary/10 text-[10px] font-bold text-primary">{initials(d.full_name)}</AvatarFallback>
+   931→                    </Avatar>
+   932→                    <div className="min-w-0 flex-1">
+   933→                      <p className="text-sm font-medium">{d.full_name}</p>
+   934→                      <p className="text-xs text-muted-foreground">{d.vehicle_plate ?? '—'} · {d.base_municipality ?? d.municipality} · {d.rating.toFixed(1)} ★ · {d.total_jobs} jobs</p>
+   935→                    </div>
+   936→                    {busy === `dispatch-${dispatchFor.id}` && <Loader2 className="h-4 w-4 animate-spin" />}
+   937→                  </button>
+   938→                ))}
+   939→              </div>
+   940→            </>
+   941→          )}
+   942→        </DialogContent>
+   943→      </Dialog>
+   944→
+   945→      {/* ---------- municipality drill-down ---------- */}
+   946→      <Dialog open={drill !== null} onOpenChange={(open) => !open && setDrill(null)}>
+   947→        <DialogContent className="max-w-md">
+   948→          <DialogHeader>
+   949→            <DialogTitle className="text-base">{drill} — recent jobs</DialogTitle>
+   950→            <DialogDescription>From the most recent 500 bookings.</DialogDescription>
+   951→          </DialogHeader>
+   952→          <div className="max-h-80 space-y-1.5 overflow-y-auto text-sm">
+   953→            {data?.recentBookings.filter((b) => b.municipality === drill).map((b) => (
+   954→              <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg border p-2 text-xs">
+   955→                <span className="font-mono">{b.reference}</span>
+   956→                <span className="min-w-0 flex-1 truncate text-muted-foreground">{b.customer?.full_name ?? '—'} · {b.driver?.full_name ?? 'unassigned'}</span>
+   957→                <StatusBadge status={b.status} />
+   958→              </div>
+   959→            ))}
+   960→            {data && data.recentBookings.filter((b) => b.municipality === drill).length === 0 && (
+   961→              <p className="py-4 text-center text-muted-foreground">No recent jobs here.</p>
+   962→            )}
+   963→          </div>
+   964→        </DialogContent>
+   965→      </Dialog>
+   966→
+   967→      {/* ---------- reject / suspend note dialog ---------- */}
+   968→      <Dialog open={noteFor !== null} onOpenChange={(open) => !open && setNoteFor(null)}>
+   969→        <DialogContent className="max-w-md">
+   970→          {noteFor && (
+   971→            <>
+   972→              <DialogHeader>
+   973→                <DialogTitle className="text-base">
+   974→                  {noteFor.kind === 'vet'
+   975→                    ? `${noteFor.decision === 'reject' ? 'Reject' : 'Suspend'} ${noteFor.driver.full_name}`
+   976→                    : `Reject disposal proof — ${noteFor.reference}`}
+   977→                </DialogTitle>
+   978→                <DialogDescription>The note is delivered to the operator and recorded in the audit trail.</DialogDescription>
+   979→              </DialogHeader>
+   980→              <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Reason — e.g. licence expired, documents unreadable, photo does not show the site…" rows={3} />
+   981→              <DialogFooter>
+   982→                <Button
+   983→                  disabled={busy !== null || noteText.trim().length < 4}
+   984→                  onClick={async () => {
+   985→                    if (noteFor.kind === 'vet') {
+   986→                      const ok = await act({ action: 'vet_driver', driverId: noteFor.driver.id, decision: noteFor.decision, note: noteText.trim() }, 'note')
+   987→                      if (ok) setNoteFor(null)
+   988→                    } else {
+   989→                      const ok = await act({ action: 'review_disposal', verificationId: noteFor.id, decision: 'reject', note: noteText.trim() }, 'note')
+   990→                      if (ok) setNoteFor(null)
+   991→                    }
+   992→                  }}
+   993→                >
+   994→                  {busy === 'note' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
+   995→                </Button>
+   996→              </DialogFooter>
+   997→            </>
+   998→          )}
+   999→        </DialogContent>
+  1000→      </Dialog>
+  1001→    </div>
+  1002→  )
+  1003→}
+  1004→
+  1005→function Field({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+  1006→  return (
+  1007→    <div>
+  1008→      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+  1009→      <p className={cn('truncate text-sm font-medium', mono && 'font-mono')}>{value || '—'}</p>
+  1010→    </div>
+  1011→  )
+  1012→}
+  1013→
+  1014→function VettingBadge({ status }: { status: Profile['vetting_status'] }) {
+  1015→  const map: Record<Profile['vetting_status'], { label: string; cls: string }> = {
+  1016→    approved: { label: 'Approved', cls: 'border-emerald-300 text-emerald-700' },
+  1017→    pending_review: { label: 'Pending review', cls: 'border-gold/40 text-gold-foreground' },
+  1018→    rejected: { label: 'Rejected', cls: 'border-destructive/40 text-destructive' },
+  1019→    suspended: { label: 'Suspended', cls: 'border-destructive/40 text-destructive' },
+  1020→  }
+  1021→  return <Badge variant="outline" className={cn('h-5 px-1.5 text-[11px]', map[status].cls)}>{map[status].label}</Badge>
+  1022→}
+  1023→
+  1024→function HealthTile({
+  1025→  icon: Icon,
+  1026→  label,
+  1027→  value,
+  1028→  hint,
+  1029→  state,
+  1030→}: {
+  1031→  icon: React.ComponentType<{ className?: string }>
+  1032→  label: string
+  1033→  value: string
+  1034→  hint: string
+  1035→  state: Health
+  1036→}) {
+  1037→  return (
+  1038→    <Card className={cn(
+  1039→      'border-l-4',
+  1040→      state === 'ok' && 'border-l-emerald-500/70',
+  1041→      state === 'warn' && 'border-l-gold',
+  1042→      state === 'bad' && 'border-l-destructive'
+  1043→    )}>
+  1044→      <CardContent className="p-4">
+  1045→        <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+  1046→          <Icon className="h-3.5 w-3.5 text-primary" /> {label}
+  1047→          <span className={cn(
+  1048→            'ml-auto h-2 w-2 rounded-full',
+  1049→            state === 'ok' && 'bg-emerald-500',
+  1050→            state === 'warn' && 'bg-gold',
+  1051→            state === 'bad' && 'bg-destructive'
+  1052→          )} />
+  1053→        </div>
+  1054→        <p className="font-display text-xl font-bold tabular-nums sm:text-2xl">{value}</p>
+  1055→        {hint && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</p>}
+  1056→      </CardContent>
+  1057→    </Card>
+  1058→  )
+  1059→}
+  1060→

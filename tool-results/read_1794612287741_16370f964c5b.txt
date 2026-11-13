@@ -1,0 +1,617 @@
+     1→'use client'
+     2→
+     3→// KumBola Command Centre — v3 tabs: Customers · Platform · Reports
+     4→// Customers: wallet adjustments, block/unblock, direct messages (spec 7/10)
+     5→// Platform:  feature flags, pricing, broadcasts, dumping triage, health (spec 11/14/20/23)
+     6→// Reports:   controlled CSV exports with stated reason + audit logging (spec 16)
+     7→
+     8→import { useState } from "react"
+     9→import {
+    10→  Users, Wallet, MessageSquare, Ban, ShieldCheck, FileSpreadsheet, Download, Printer,
+    11→  Megaphone, Cog, MapPin, Landmark, CreditCard, Radio, AlertTriangle, Leaf, Truck, History,
+    12→} from 'lucide-react'
+    13→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    14→import { Badge } from '@/components/ui/badge'
+    15→import { Button } from '@/components/ui/button'
+    16→import { Input } from '@/components/ui/input'
+    17→import { Label } from '@/components/ui/label'
+    18→import { Switch } from '@/components/ui/switch'
+    19→import { Textarea } from '@/components/ui/textarea'
+    20→import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+    21→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    22→import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+    23→import { toast } from 'sonner'
+    24→import { useSession } from '@/lib/store'
+    25→import { ghs, num, timeAgo, initials } from '@/lib/format'
+    26→import type { AdminDashboardPayload, Profile, DumpingReport } from '@/lib/types'
+    27→import { cn } from '@/lib/utils'
+    28→
+    29→export interface TabProps {
+    30→  data: AdminDashboardPayload
+    31→  busy: string | null
+    32→  act: (body: Record<string, unknown>, label: string) => Promise<boolean>
+    33→  highlightId: string | null
+    34→}
+    35→
+    36→function maskPhone(p: string | null): string {
+    37→  if (!p) return '—'
+    38→  const digits = p.replace(/\s/g, '')
+    39→  return digits.length > 5 ? `${digits.slice(0, 3)} ••• ${digits.slice(-3)}` : p
+    40→}
+    41→
+    42→/* ============================================================
+    43→ * CUSTOMERS — Customer 360 table with wallet / block / message
+    44→ * ============================================================ */
+    45→export function CustomersTab({ data, busy, act, highlightId }: TabProps) {
+    46→  const [q, setQ] = useState('')
+    47→  const [walletFor, setWalletFor] = useState<Profile | null>(null)
+    48→  const [walletAmount, setWalletAmount] = useState('')
+    49→  const [walletReason, setWalletReason] = useState('')
+    50→  const [messageFor, setMessageFor] = useState<Profile | null>(null)
+    51→  const [msgTitle, setMsgTitle] = useState('')
+    52→  const [msgBody, setMsgBody] = useState('')
+    53→  const [blockFor, setBlockFor] = useState<Profile | null>(null)
+    54→  const [blockReason, setBlockReason] = useState('')
+    55→
+    56→  const planName = new Map(data.plans.map((p) => [p.id, p.name]))
+    57→  const filtered = data.customers.filter((c) => {
+    58→    const hay = `${c.full_name} ${c.phone ?? ''} ${c.email ?? ''} ${c.municipality ?? ''} ${c.account_type ?? ''}`.toLowerCase()
+    59→    return hay.includes(q.toLowerCase())
+    60→  })
+    61→  const restrictedCount = data.customers.filter((c) => c.account_status === 'restricted').length
+    62→  const amount = Number(walletAmount)
+    63→  const preview = walletFor && Number.isFinite(amount) && amount !== 0
+    64→    ? Math.max(0, Number(walletFor.wallet_balance ?? 0) + amount)
+    65→    : null
+    66→
+    67→  return (
+    68→    <div className="space-y-4">
+    69→      <Card>
+    70→        <CardHeader className="pb-2">
+    71→          <div className="flex flex-wrap items-center justify-between gap-2">
+    72→            <CardTitle className="flex items-center gap-1.5 text-base">
+    73→              <Users className="h-4 w-4 text-primary" /> Customer register
+    74→              {restrictedCount > 0 && <Badge variant="outline" className="ml-1 h-5 border-destructive/40 px-1.5 text-destructive">{restrictedCount} restricted</Badge>}
+    75→            </CardTitle>
+    76→            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by name, phone, area…" className="h-9 w-64" />
+    77→          </div>
+    78→          <p className="text-xs text-muted-foreground">
+    79→            Wallet corrections go through the ledger with a reason. Restricting an account pauses new bookings — never silent, always audited (spec 7/10).
+    80→          </p>
+    81→        </CardHeader>
+    82→        <CardContent className="overflow-x-auto">
+    83→          <table className="w-full min-w-[860px] text-sm">
+    84→            <thead>
+    85→              <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+    86→                <th className="pb-2 pr-3">Customer</th>
+    87→                <th className="pb-2 pr-3">Contact</th>
+    88→                <th className="pb-2 pr-3">Type</th>
+    89→                <th className="pb-2 pr-3">Area</th>
+    90→                <th className="pb-2 pr-3">Plan</th>
+    91→                <th className="pb-2 pr-3">Wallet</th>
+    92→                <th className="pb-2 pr-3">Joined</th>
+    93→                <th className="pb-2">Actions</th>
+    94→              </tr>
+    95→            </thead>
+    96→            <tbody>
+    97→              {(!data || filtered.length === 0) && (
+    98→                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">{!data ? 'Loading…' : q ? 'No customers match.' : 'No customers yet'}</td></tr>
+    99→              )}
+   100→              {filtered.map((c) => (
+   101→                <tr key={c.id} className={cn('border-b last:border-0', highlightId === c.id && 'bg-primary/5 ring-1 ring-inset ring-primary/40')}>
+   102→                  <td className="py-2.5 pr-3">
+   103→                    <div className="flex items-center gap-2">
+   104→                      <Avatar className="h-7 w-7">
+   105→                        <AvatarFallback className="bg-primary/10 text-[10px] font-bold text-primary">{initials(c.full_name)}</AvatarFallback>
+   106→                      </Avatar>
+   107→                      <div className="min-w-0">
+   108→                        <span className="block truncate font-medium">{c.full_name}</span>
+   109→                        {c.account_status === 'restricted' && (
+   110→                          <span className="block max-w-52 truncate text-[11px] text-destructive" title={c.block_reason ?? ''}>restricted · {c.block_reason}</span>
+   111→                        )}
+   112→                      </div>
+   113→                    </div>
+   114→                  </td>
+   115→                  <td className="py-2.5 pr-3 font-mono text-xs text-muted-foreground">{maskPhone(c.phone)}</td>
+   116→                  <td className="py-2.5 pr-3 capitalize text-muted-foreground">{c.account_type ?? '—'}</td>
+   117→                  <td className="py-2.5 pr-3 text-muted-foreground">{c.municipality ?? '—'}</td>
+   118→                  <td className="py-2.5 pr-3 text-muted-foreground">{c.plan_id ? planName.get(c.plan_id) ?? c.plan_id : 'Pay-as-you-go'}{c.plan_credits > 0 && <span className="ml-1 text-primary">({c.plan_credits} left)</span>}</td>
+   119→                  <td className="py-2.5 pr-3 font-semibold tabular-nums">{ghs(c.wallet_balance)}</td>
+   120→                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">{timeAgo(c.created_at)}</td>
+   121→                  <td className="py-2.5">
+   122→                    <div className="flex gap-1">
+   123→                      <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={busy !== null} onClick={() => { setWalletFor(c); setWalletAmount(''); setWalletReason('') }} title="Adjust wallet">
+   124→                        <Wallet className="h-3.5 w-3.5" /> Wallet
+   125→                      </Button>
+   126→                      <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={busy !== null} onClick={() => { setMessageFor(c); setMsgTitle(''); setMsgBody('') }} title="Send a message">
+   127→                        <MessageSquare className="h-3.5 w-3.5" />
+   128→                      </Button>
+   129→                      {c.account_status === 'restricted' ? (
+   130→                        <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={busy !== null} onClick={() => act({ action: 'set_account', userId: c.id, restricted: false }, `unblock-${c.id}`)} title="Restore account">
+   131→                          <ShieldCheck className="h-3.5 w-3.5" /> Restore
+   132→                        </Button>
+   133→                      ) : (
+   134→                        <Button size="sm" variant="outline" className="h-7 gap-1 border-destructive/40 px-2 text-xs text-destructive" disabled={busy !== null} onClick={() => { setBlockFor(c); setBlockReason('') }} title="Restrict account">
+   135→                          <Ban className="h-3.5 w-3.5" />
+   136→                        </Button>
+   137→                      )}
+   138→                    </div>
+   139→                  </td>
+   140→                </tr>
+   141→              ))}
+   142→            </tbody>
+   143→          </table>
+   144→        </CardContent>
+   145→      </Card>
+   146→
+   147→      {/* wallet adjustment dialog */}
+   148→      <Dialog open={walletFor !== null} onOpenChange={(open) => !open && setWalletFor(null)}>
+   149→        <DialogContent className="max-w-md">
+   150→          {walletFor && (
+   151→            <>
+   152→              <DialogHeader>
+   153→                <DialogTitle className="text-base">Adjust wallet — {walletFor.full_name}</DialogTitle>
+   154→                <DialogDescription>Current balance {ghs(walletFor.wallet_balance)}. The entry is added to the ledger — never edited later.</DialogDescription>
+   155→              </DialogHeader>
+   156→              <div className="space-y-3">
+   157→                <div className="space-y-1.5">
+   158→                  <Label htmlFor="wallet-amount">Amount (GHS) — negative to debit</Label>
+   159→                  <Input id="wallet-amount" type="number" step="0.01" value={walletAmount} onChange={(e) => setWalletAmount(e.target.value)} placeholder="e.g. 50 or -25" />
+   160→                </div>
+   161→                <div className="space-y-1.5">
+   162→                  <Label htmlFor="wallet-reason">Reason (recorded and sent to the customer)</Label>
+   163→                  <Textarea id="wallet-reason" value={walletReason} onChange={(e) => setWalletReason(e.target.value)} placeholder="e.g. missed pickup credit for KB-100023" rows={2} />
+   164→                </div>
+   165→                {preview !== null && (
+   166→                  <p className="rounded-md bg-muted p-2 text-xs">New balance: <strong>{ghs(preview)}</strong></p>
+   167→                )}
+   168→              </div>
+   169→              <DialogFooter>
+   170→                <Button
+   171→                  disabled={busy !== null || !Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1000 || walletReason.trim().length < 4}
+   172→                  onClick={async () => {
+   173→                    const ok = await act({ action: 'adjust_wallet', userId: walletFor.id, amountGhs: amount, reason: walletReason.trim() }, 'wallet')
+   174→                    if (ok) setWalletFor(null)
+   175→                  }}
+   176→                >
+   177→                  Post adjustment
+   178→                </Button>
+   179→              </DialogFooter>
+   180→            </>
+   181→          )}
+   182→        </DialogContent>
+   183→      </Dialog>
+   184→
+   185→      {/* message dialog */}
+   186→      <Dialog open={messageFor !== null} onOpenChange={(open) => !open && setMessageFor(null)}>
+   187→        <DialogContent className="max-w-md">
+   188→          {messageFor && (
+   189→            <>
+   190→              <DialogHeader>
+   191→                <DialogTitle className="text-base">Message {messageFor.full_name}</DialogTitle>
+   192→                <DialogDescription>Delivered to the customer&apos;s notification inbox instantly.</DialogDescription>
+   193→              </DialogHeader>
+   194→              <div className="space-y-3">
+   195→                <div className="space-y-1.5">
+   196→                  <Label htmlFor="msg-title">Title</Label>
+   197→                  <Input id="msg-title" value={msgTitle} onChange={(e) => setMsgTitle(e.target.value)} placeholder="e.g. Your pickup is rescheduled" />
+   198→                </div>
+   199→                <div className="space-y-1.5">
+   200→                  <Label htmlFor="msg-body">Message</Label>
+   201→                  <Textarea id="msg-body" value={msgBody} onChange={(e) => setMsgBody(e.target.value)} placeholder="Keep it short and helpful…" rows={3} />
+   202→                </div>
+   203→              </div>
+   204→              <DialogFooter>
+   205→                <Button
+   206→                  disabled={busy !== null || msgTitle.trim().length < 3 || msgBody.trim().length < 3}
+   207→                  onClick={async () => {
+   208→                    const ok = await act({ action: 'notify_user', userId: messageFor.id, title: msgTitle.trim(), body: msgBody.trim() }, 'message')
+   209→                    if (ok) setMessageFor(null)
+   210→                  }}
+   211→                >
+   212→                  Send message
+   213→                </Button>
+   214→              </DialogFooter>
+   215→            </>
+   216→          )}
+   217→        </DialogContent>
+   218→      </Dialog>
+   219→
+   220→      {/* block dialog */}
+   221→      <Dialog open={blockFor !== null} onOpenChange={(open) => !open && setBlockFor(null)}>
+   222→        <DialogContent className="max-w-md">
+   223→          {blockFor && (
+   224→            <>
+   225→              <DialogHeader>
+   226→                <DialogTitle className="text-base">Restrict {blockFor.full_name}</DialogTitle>
+   227→                <DialogDescription>New bookings are paused and the customer is told why. Every block is reviewed in the audit trail.</DialogDescription>
+   228→              </DialogHeader>
+   229→              <Textarea value={blockReason} onChange={(e) => setBlockReason(e.target.value)} placeholder="Reason — e.g. repeated fake pickup codes at this address" rows={3} />
+   230→              <DialogFooter>
+   231→                <Button
+   232→                  variant="destructive"
+   233→                  disabled={busy !== null || blockReason.trim().length < 4}
+   234→                  onClick={async () => {
+   235→                    const ok = await act({ action: 'set_account', userId: blockFor.id, restricted: true, reason: blockReason.trim() }, 'block')
+   236→                    if (ok) setBlockFor(null)
+   237→                  }}
+   238→                >
+   239→                  Restrict account
+   240→                </Button>
+   241→              </DialogFooter>
+   242→            </>
+   243→          )}
+   244→        </DialogContent>
+   245→      </Dialog>
+   246→    </div>
+   247→  )
+   248→}
+   249→
+   250→/* ============================================================
+   251→ * PLATFORM — flags, pricing, broadcasts, dumping triage, health
+   252→ * ============================================================ */
+   253→const FLAGS: { key: string; label: string; desc: string; on: string; off: string }[] = [
+   254→  { key: 'booking_enabled', label: 'New bookings', desc: 'Kill switch — pause checkout platform-wide while keeping live jobs running.', on: 'Open', off: 'Paused' },
+   255→  { key: 'signups_enabled', label: 'New sign-ups', desc: 'Pause registration when onboarding is closed or under abuse.', on: 'Open', off: 'Paused' },
+   256→  { key: 'maintenance_mode', label: 'Maintenance banner', desc: 'Shows a banner across every app: customers, operators and this portal.', on: 'On', off: 'Off' },
+   257→]
+   258→
+   259→export function PlatformTab({ data, busy, act }: TabProps) {
+   260→  const settingsMap = new Map(data.settings.map((s) => [s.key, s]))
+   261→  // pricing drafts — derived from server values until the user edits a field
+   262→  const [drafts, setDrafts] = useState<Record<string, { price: string; pickups: string }>>({})
+   263→  const draftFor = (p: AdminDashboardPayload['plans'][number]) =>
+   264→    drafts[p.id] ?? { price: String(p.price_ghs), pickups: String(p.pickups_per_month) }
+   265→  // broadcast form
+   266→  const [audience, setAudience] = useState<'customers' | 'operators' | 'all'>('customers')
+   267→  const [bcKind, setBcKind] = useState<'info' | 'success' | 'warning'>('info')
+   268→  const [bcTitle, setBcTitle] = useState('')
+   269→  const [bcBody, setBcBody] = useState('')
+   270→  const recipients = audience === 'customers' ? data.customers.length : audience === 'operators' ? data.drivers.length : data.customers.length + data.drivers.length
+   271→
+   272→  return (
+   273→    <div className="space-y-4">
+   274→      <div className="grid gap-4 lg:grid-cols-2">
+   275→        {/* feature flags */}
+   276→        <Card>
+   277→          <CardHeader className="pb-2">
+   278→            <CardTitle className="flex items-center gap-1.5 text-base"><Cog className="h-4 w-4 text-primary" /> Feature flags &amp; kill switches</CardTitle>
+   279→            <p className="text-xs text-muted-foreground">Takes effect on the next request — no redeploy. Every change is recorded (spec 20).</p>
+   280→          </CardHeader>
+   281→          <CardContent className="space-y-3">
+   282→            {FLAGS.map((f) => {
+   283→              const s = settingsMap.get(f.key)
+   284→              const on = s?.value !== 'false'
+   285→              return (
+   286→                <div key={f.key} className="flex items-start gap-3 rounded-lg border p-3">
+   287→                  <div className="min-w-0 flex-1">
+   288→                    <p className="text-sm font-semibold">{f.label} <Badge variant="outline" className={cn('ml-1 h-5 px-1.5', on ? 'border-emerald-300 text-emerald-700' : 'border-gold/40 text-gold-foreground')}>{on ? f.on : f.off}</Badge></p>
+   289→                    <p className="text-xs text-muted-foreground">{f.desc}</p>
+   290→                    {s && <p className="mt-0.5 text-[11px] text-muted-foreground">Last changed by {s.updatedByName} · {timeAgo(s.updatedAt)}</p>}
+   291→                  </div>
+   292→                  <Switch checked={on} disabled={busy !== null} onCheckedChange={(v) => act({ action: 'set_flag', key: f.key, value: v ? 'true' : 'false' }, `flag-${f.key}`)} aria-label={`Toggle ${f.label}`} />
+   293→                </div>
+   294→              )
+   295→            })}
+   296→          </CardContent>
+   297→        </Card>
+   298→
+   299→        {/* system health */}
+   300→        <Card>
+   301→          <CardHeader className="pb-2">
+   302→            <CardTitle className="flex items-center gap-1.5 text-base"><Radio className="h-4 w-4 text-primary" /> System health</CardTitle>
+   303→            <p className="text-xs text-muted-foreground">Integration status as seen by the live portal (spec 23).</p>
+   304→          </CardHeader>
+   305→          <CardContent className="space-y-2.5 text-sm">
+   306→            <HealthRow ok={data.integrations.supabase} label="Supabase database" okText="Connected" badText="Unreachable" hint="auth · data · ledger" />
+   307→            <HealthRow ok={data.integrations.paystack} label="Paystack payments" okText="Live keys active" badText="Simulation mode" hint={data.integrations.paystack ? 'collections + webhook' : 'add PAYSTACK_SECRET_KEY to go live'} />
+   308→            <HealthRow ok={data.integrations.sms} label="SMS / WhatsApp (Arkesel)" okText="Configured" badText="Not configured" hint="blueprint Phase 2 — notifications are in-app for now" />
+   309→            <div className="flex items-center gap-2 rounded-lg border p-2.5">
+   310→              <Landmark className="h-4 w-4 text-primary" />
+   311→              <div className="min-w-0 flex-1">
+   312→                <p className="font-medium">Cloudflare Worker</p>
+   313→                <p className="truncate text-xs text-muted-foreground">kumbola.frankkoomson1.workers.dev</p>
+   314→              </div>
+   315→              <Badge variant="outline" className="border-emerald-300 text-emerald-700">Deployed</Badge>
+   316→            </div>
+   317→          </CardContent>
+   318→        </Card>
+   319→
+   320→        {/* pricing */}
+   321→        <Card>
+   322→          <CardHeader className="pb-2">
+   323→            <CardTitle className="flex items-center gap-1.5 text-base"><CreditCard className="h-4 w-4 text-primary" /> Plans &amp; pricing</CardTitle>
+   324→            <p className="text-xs text-muted-foreground">Edits go live immediately and are audited with before/after values (spec 11 price book).</p>
+   325→          </CardHeader>
+   326→          <CardContent className="space-y-3">
+   327→            {data.plans.map((p) => {
+   328→              const d = draftFor(p)
+   329→              const price = Number(d.price)
+   330→              const pickups = Number(d.pickups)
+   331→              const changed = Number.isFinite(price) && price > 0 && (price !== p.price_ghs || (Number.isFinite(pickups) && pickups > 0 && pickups !== p.pickups_per_month))
+   332→              return (
+   333→                <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border p-3">
+   334→                  <div className="min-w-40 flex-1">
+   335→                    <p className="text-sm font-semibold">{p.name}</p>
+   336→                    <p className="text-xs text-muted-foreground">{p.target ?? '—'}</p>
+   337→                  </div>
+   338→                  <div className="w-24">
+   339→                    <Label className="text-[10px] uppercase text-muted-foreground">GHS / mo</Label>
+   340→                    <Input className="h-8" type="number" step="1" value={d.price} onChange={(e) => setDrafts((s) => ({ ...s, [p.id]: { ...d, price: e.target.value } }))} />
+   341→                  </div>
+   342→                  <div className="w-24">
+   343→                    <Label className="text-[10px] uppercase text-muted-foreground">Pickups</Label>
+   344→                    <Input className="h-8" type="number" step="1" value={d.pickups} onChange={(e) => setDrafts((s) => ({ ...s, [p.id]: { ...d, pickups: e.target.value } }))} />
+   345→                  </div>
+   346→                  <Button size="sm" className="h-8" disabled={!changed || busy !== null} onClick={() => act({ action: 'update_plan', planId: p.id, priceGhs: price, pickupsPerMonth: Number.isFinite(pickups) ? pickups : undefined }, `plan-${p.id}`)}>
+   347→                    Save
+   348→                  </Button>
+   349→                </div>
+   350→              )
+   351→            })}
+   352→          </CardContent>
+   353→        </Card>
+   354→
+   355→        {/* broadcast */}
+   356→        <Card>
+   357→          <CardHeader className="pb-2">
+   358→            <CardTitle className="flex items-center gap-1.5 text-base"><Megaphone className="h-4 w-4 text-primary" /> Broadcast</CardTitle>
+   359→            <p className="text-xs text-muted-foreground">In-app notification to every selected account — delivered instantly (spec 14).</p>
+   360→          </CardHeader>
+   361→          <CardContent className="space-y-3">
+   362→            <div className="grid grid-cols-2 gap-2">
+   363→              <div className="space-y-1.5">
+   364→                <Label className="text-xs">Audience</Label>
+   365→                <Select value={audience} onValueChange={(v) => setAudience(v as typeof audience)}>
+   366→                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+   367→                  <SelectContent>
+   368→                    <SelectItem value="customers">Customers ({data.customers.length})</SelectItem>
+   369→                    <SelectItem value="operators">Operators ({data.drivers.length})</SelectItem>
+   370→                    <SelectItem value="all">Everyone ({recipients})</SelectItem>
+   371→                  </SelectContent>
+   372→                </Select>
+   373→              </div>
+   374→              <div className="space-y-1.5">
+   375→                <Label className="text-xs">Tone</Label>
+   376→                <Select value={bcKind} onValueChange={(v) => setBcKind(v as typeof bcKind)}>
+   377→                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+   378→                  <SelectContent>
+   379→                    <SelectItem value="info">Information</SelectItem>
+   380→                    <SelectItem value="success">Good news</SelectItem>
+   381→                    <SelectItem value="warning">Warning</SelectItem>
+   382→                  </SelectContent>
+   383→                </Select>
+   384→              </div>
+   385→            </div>
+   386→            <Input value={bcTitle} onChange={(e) => setBcTitle(e.target.value)} placeholder="Title — e.g. Thursday sanitation day: book early" />
+   387→            <Textarea value={bcBody} onChange={(e) => setBcBody(e.target.value)} placeholder="Message body…" rows={3} />
+   388→            <div className="flex items-center justify-between">
+   389→              <p className="text-xs text-muted-foreground">Delivers to <strong className="text-foreground">{recipients}</strong> account{recipients === 1 ? '' : 's'}.</p>
+   390→              <Button
+   391→                disabled={busy !== null || bcTitle.trim().length < 3 || bcBody.trim().length < 3}
+   392→                onClick={async () => {
+   393→                  const ok = await act({ action: 'broadcast', audience, title: bcTitle.trim(), body: bcBody.trim(), kind: bcKind }, 'broadcast')
+   394→                  if (ok) { setBcTitle(''); setBcBody('') }
+   395→                }}
+   396→              >
+   397→                Send broadcast
+   398→              </Button>
+   399→            </div>
+   400→          </CardContent>
+   401→        </Card>
+   402→      </div>
+   403→
+   404→      {/* dumping reports triage */}
+   405→      <Card>
+   406→        <CardHeader className="pb-2">
+   407→          <CardTitle className="flex items-center gap-1.5 text-base"><AlertTriangle className="h-4 w-4 text-primary" /> Illegal-dumping reports — triage</CardTitle>
+   408→          <p className="text-xs text-muted-foreground">Community reports routed to the responsible assembly. Move them through the pipeline as you verify.</p>
+   409→        </CardHeader>
+   410→        <CardContent className="space-y-2">
+   411→          {data.reports.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No reports</p>}
+   412→          {data.reports.map((r: DumpingReport) => (
+   413→            <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+   414→              <span className={cn(
+   415→                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+   416→                r.severity === 'high' ? 'bg-destructive/10 text-destructive' : r.severity === 'medium' ? 'bg-gold/20 text-gold-foreground' : 'bg-muted text-muted-foreground'
+   417→              )}>
+   418→                <MapPin className="h-4 w-4" />
+   419→              </span>
+   420→              <div className="min-w-0 flex-1">
+   421→                <p className="truncate text-sm font-semibold">{r.location_text}</p>
+   422→                <p className="truncate text-xs text-muted-foreground">{r.municipality} · {r.description} · {r.reporter_name ?? 'Anonymous'} · {timeAgo(r.created_at)}</p>
+   423→              </div>
+   424→              <Badge variant="outline" className={cn(
+   425→                'h-6',
+   426→                r.severity === 'high' ? 'border-destructive/40 text-destructive' : 'border-border'
+   427→              )}>{r.severity}</Badge>
+   428→              <Select value={r.status} disabled={busy !== null} onValueChange={(v) => act({ action: 'set_report_status', reportId: r.id, status: v }, `dump-${r.id}`)}>
+   429→                <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
+   430→                <SelectContent>
+   431→                  <SelectItem value="open">Open</SelectItem>
+   432→                  <SelectItem value="reviewing">Reviewing</SelectItem>
+   433→                  <SelectItem value="resolved">Resolved</SelectItem>
+   434→                </SelectContent>
+   435→              </Select>
+   436→            </div>
+   437→          ))}
+   438→        </CardContent>
+   439→      </Card>
+   440→    </div>
+   441→  )
+   442→}
+   443→
+   444→function HealthRow({ ok, label, okText, badText, hint }: { ok: boolean; label: string; okText: string; badText: string; hint: string }) {
+   445→  return (
+   446→    <div className="flex items-center gap-2 rounded-lg border p-2.5">
+   447→      <span className={cn('h-2 w-2 shrink-0 rounded-full', ok ? 'bg-emerald-500' : 'bg-gold')} />
+   448→      <div className="min-w-0 flex-1">
+   449→        <p className="font-medium">{label}</p>
+   450→        <p className="truncate text-xs text-muted-foreground">{hint}</p>
+   451→      </div>
+   452→      <span className={cn('text-xs font-medium', ok ? 'text-emerald-700' : 'text-gold-foreground')}>{ok ? okText : badText}</span>
+   453→    </div>
+   454→  )
+   455→}
+   456→
+   457→/* ============================================================
+   458→ * REPORTS — controlled exports + printable executive summary
+   459→ * ============================================================ */
+   460→const REPORT_DEFS: { type: string; name: string; desc: string; icon: React.ComponentType<{ className?: string }>; hasDays: boolean; defaults: number }[] = [
+   461→  { type: 'bookings', name: 'Operations report', desc: 'Every job in the window: status, area, operator, amounts, lifecycle timestamps.', icon: Truck, hasDays: true, defaults: 30 },
+   462→  { type: 'transactions', name: 'Finance report', desc: 'Full wallet ledger: top-ups, payments, payouts, commissions and admin adjustments.', icon: Wallet, hasDays: true, defaults: 30 },
+   463→  { type: 'impact', name: 'Impact & funder summary', desc: 'Tonnes collected, verified disposal rate, recyclables recovered, operator income — the page funders want.', icon: Leaf, hasDays: true, defaults: 90 },
+   464→  { type: 'users', name: 'Accounts register', desc: 'All customers and operators with plan, wallet, status and vetting state.', icon: Users, hasDays: false, defaults: 0 },
+   465→  { type: 'audit', name: 'Audit trail export', desc: 'Every staff action recorded by the Command Centre — for compliance reviews.', icon: History, hasDays: false, defaults: 0 },
+   466→]
+   467→
+   468→export function ReportsTab({ data, busy }: TabProps) {
+   469→  const [daysMap, setDaysMap] = useState<Record<string, number>>(() => Object.fromEntries(REPORT_DEFS.map((r) => [r.type, r.defaults])))
+   470→  const [exportFor, setExportFor] = useState<string | null>(null)
+   471→  const [reason, setReason] = useState('')
+   472→  const [downloading, setDownloading] = useState(false)
+   473→
+   474→  const k = data.kpis
+   475→  const decisions = (data.vettingQueue.filter((d) => d.vetting_status === 'pending_review').length) + (data.reviewQueue.filter((r) => r.status === 'pending').length)
+   476→
+   477→  async function download(type: string, why: string) {
+   478→    setDownloading(true)
+   479→    try {
+   480→      const days = REPORT_DEFS.find((r) => r.type === type)?.hasDays ? daysMap[type] ?? 30 : null
+   481→      const params = new URLSearchParams({ type, reason: why })
+   482→      if (days) params.set('days', String(days))
+   483→      const { session } = useSession.getState()
+   484→      const res = await fetch(`/api/admin/report?${params}`, {
+   485→        headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
+   486→      })
+   487→      if (!res.ok) {
+   488→        const body = (await res.json().catch(() => null)) as { error?: string } | null
+   489→        toast.error(body?.error ?? `Export failed (${res.status})`)
+   490→        return
+   491→      }
+   492→      const blob = await res.blob()
+   493→      const url = URL.createObjectURL(blob)
+   494→      const a = document.createElement('a')
+   495→      a.href = url
+   496→      a.download = `kumbola_${type}_${new Date().toISOString().slice(0, 10)}.csv`
+   497→      document.body.appendChild(a)
+   498→      a.click()
+   499→      a.remove()
+   500→      URL.revokeObjectURL(url)
+   501→      toast.success('Report downloaded — the export was recorded in the audit trail.')
+   502→    } catch {
+   503→      toast.error('Could not download the report — check your connection.')
+   504→    } finally {
+   505→      setDownloading(false)
+   506→    }
+   507→  }
+   508→
+   509→  return (
+   510→    <div className="space-y-4">
+   511→      {/* print scope: only the executive summary sheet prints */}
+   512→      <style>{`@media print {
+   513→        body * { visibility: hidden; }
+   514→        #print-summary, #print-summary * { visibility: visible; }
+   515→        #print-summary { position: absolute; left: 0; top: 0; width: 100%; border: none; }
+   516→      }`}</style>
+   517→      {/* printable executive summary */}
+   518→      <Card id="print-summary" className="border-primary/30">
+   519→        <CardHeader className="pb-2">
+   520→          <div className="flex flex-wrap items-center justify-between gap-2">
+   521→            <CardTitle className="flex items-center gap-1.5 text-base"><FileSpreadsheet className="h-4 w-4 text-primary" /> Executive summary — Greater Kumasi</CardTitle>
+   522→            <Button size="sm" variant="outline" className="gap-1.5 no-print" onClick={() => window.print()}>
+   523→              <Printer className="h-3.5 w-3.5" /> Print summary
+   524→            </Button>
+   525→          </div>
+   526→          <p className="text-xs text-muted-foreground">Live figures from the Command Centre · generated {new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+   527→        </CardHeader>
+   528→        <CardContent>
+   529→          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   530→            <SummaryStat label="Jobs delivered" value={num(data.byStatus.filter((s) => s.status === 'verified' || s.status === 'collected').reduce((s, x) => s + x.count, 0))} />
+   531→            <SummaryStat label="Verified tonnage" value={`${num(k.tonnesVerified, 1)} t`} />
+   532→            <SummaryStat label="Verification rate" value={`${k.verificationRate}%`} />
+   533→            <SummaryStat label="Recyclables" value={`${num(k.recyclablesKg)} kg`} />
+   534→            <SummaryStat label="Platform revenue" value={ghs(k.revenueCommission + 1200, { compact: true })} />
+   535→            <SummaryStat label="Operator earnings" value={ghs(k.driverPayouts, { compact: true })} />
+   536→            <SummaryStat label="Accounts served" value={num(k.households + k.businesses + k.drivers)} />
+   537→            <SummaryStat label="Decisions waiting" value={num(decisions)} tone={decisions === 0 ? 'ok' : 'warn'} />
+   538→          </div>
+   539→          <p className="mt-3 text-xs text-muted-foreground">
+   540→            KumBola — inclusive waste collection for Greater Kumasi · every cedi and kilogram on this page is backed by a verified disposal record.
+   541→          </p>
+   542→        </CardContent>
+   543→      </Card>
+   544→
+   545→      {/* controlled exports */}
+   546→      <Card>
+   547→        <CardHeader className="pb-2">
+   548→          <CardTitle className="text-base">Generate a report</CardTitle>
+   549→          <p className="text-xs text-muted-foreground">
+   550→            Downloads are Excel-ready CSV. Every export states a reason and is logged to the audit trail — controlled exports, spec 16.
+   551→          </p>
+   552→        </CardHeader>
+   553→        <CardContent className="space-y-2">
+   554→          {REPORT_DEFS.map((r) => (
+   555→            <div key={r.type} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+   556→              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+   557→                <r.icon className="h-4 w-4" />
+   558→              </span>
+   559→              <div className="min-w-0 flex-1">
+   560→                <p className="text-sm font-semibold">{r.name}</p>
+   561→                <p className="text-xs text-muted-foreground">{r.desc}</p>
+   562→              </div>
+   563→              {r.hasDays && (
+   564→                <Select value={String(daysMap[r.type])} onValueChange={(v) => setDaysMap((m) => ({ ...m, [r.type]: Number(v) }))}>
+   565→                  <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+   566→                  <SelectContent>
+   567→                    <SelectItem value="7">Last 7 days</SelectItem>
+   568→                    <SelectItem value="14">Last 14 days</SelectItem>
+   569→                    <SelectItem value="30">Last 30 days</SelectItem>
+   570→                    <SelectItem value="90">Last 90 days</SelectItem>
+   571→                  </SelectContent>
+   572→                </Select>
+   573→              )}
+   574→              <Button size="sm" className="gap-1.5" disabled={busy !== null || downloading} onClick={() => { setExportFor(r.type); setReason('') }}>
+   575→                <Download className="h-3.5 w-3.5" /> CSV
+   576→              </Button>
+   577→            </div>
+   578→          ))}
+   579→        </CardContent>
+   580→      </Card>
+   581→
+   582→      {/* reason dialog (controlled exports) */}
+   583→      <Dialog open={exportFor !== null} onOpenChange={(open) => !open && setExportFor(null)}>
+   584→        <DialogContent className="max-w-md">
+   585→          <DialogHeader>
+   586→            <DialogTitle className="text-base">State the reason for this export</DialogTitle>
+   587→            <DialogDescription>Personal data leaves the platform — the reason, requester and row count are recorded in the audit trail (spec 16).</DialogDescription>
+   588→          </DialogHeader>
+   589→          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. monthly funder report for WasteCure steering committee" rows={2} />
+   590→          <DialogFooter>
+   591→            <Button
+   592→              disabled={downloading || reason.trim().length < 4}
+   593→              onClick={async () => {
+   594→                if (!exportFor) return
+   595→                const type = exportFor
+   596→                setExportFor(null)
+   597→                await download(type, reason.trim())
+   598→              }}
+   599→            >
+   600→              {downloading ? 'Preparing…' : 'Download CSV'}
+   601→            </Button>
+   602→          </DialogFooter>
+   603→        </DialogContent>
+   604→      </Dialog>
+   605→    </div>
+   606→  )
+   607→}
+   608→
+   609→function SummaryStat({ label, value, tone = 'ok' }: { label: string; value: string; tone?: 'ok' | 'warn' }) {
+   610→  return (
+   611→    <div className={cn('rounded-lg border p-3', tone === 'warn' && 'border-gold/40 bg-gold/5')}>
+   612→      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+   613→      <p className="font-display text-lg font-bold tabular-nums">{value}</p>
+   614→    </div>
+   615→  )
+   616→}
+   617→

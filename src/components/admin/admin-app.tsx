@@ -4,6 +4,9 @@
 // Tabs: Today · Analytics · Operations · Operators · Customers · Platform · Reports · Audit
 // v3 (Task 19): global search (spec 3), full app control (flags/pricing/broadcast/
 // wallets/blocks), report generation with controlled exports (spec 16), toasts.
+// v4 (Task 20) refactor: semantic landmarks/tables, keyboard operability (rows,
+// search Escape, BarList), labelled icon buttons, strict 4/8px spacing grid,
+// single-source revenueYtd (was a hardcoded 1200 in two places).
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
@@ -83,21 +86,20 @@ export function AdminApp({
   }, [days])
 
   useEffect(() => {
-    const initial = setTimeout(load, 0)
+    void load()
     const t = setInterval(load, 15000)
-    return () => {
-      clearTimeout(initial)
-      clearInterval(t)
-    }
+    return () => clearInterval(t)
   }, [load])
 
-  // Ctrl+K focuses global search (spec 3)
+  // Ctrl+K focuses global search · Escape dismisses results (spec 3)
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         searchRef.current?.focus()
         setSearchOpen(true)
+      } else if (e.key === 'Escape') {
+        setSearchOpen(false)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -215,7 +217,7 @@ export function AdminApp({
     {
       icon: Wallet,
       label: 'Platform revenue',
-      value: k ? ghs(k.revenueCommission + 1200, { compact: true }) : '—',
+      value: k ? ghs(k.revenueYtd, { compact: true }) : '—',
       hint: 'commission + data fees',
       state: 'ok',
     },
@@ -248,7 +250,7 @@ export function AdminApp({
     <div className="min-h-screen bg-background">
       <AppHeader profile={profile} onExit={onExit} accent="border-primary/20 bg-forest text-forest-foreground" />
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="flex items-center gap-2 font-display text-2xl font-bold sm:text-3xl">
               <Landmark className="h-6 w-6 text-primary" /> Command Centre
@@ -256,12 +258,12 @@ export function AdminApp({
             <p className="text-sm text-muted-foreground">Greater Kumasi · every pickup, cedi and operator under one roof</p>
           </div>
           <div className="flex items-center gap-2">
-            {error && <span className="max-w-[240px] truncate rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive">{error}</span>}
-            <span className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> live · auto-refresh 15s
+            {error && <span role="status" className="max-w-60 truncate rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive">{error}</span>}
+            <span className="flex items-center gap-2 rounded-full border bg-card px-3 py-2 text-xs text-muted-foreground">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" /> live · auto-refresh 15s
             </span>
           </div>
-        </div>
+        </header>
 
         {/* ---------- global search (spec 3) ---------- */}
         <div className="relative mb-5">
@@ -276,18 +278,26 @@ export function AdminApp({
             placeholder="Search anything — job reference, customer, operator, phone, pickup code…  (Ctrl+K)"
             className="h-11 pl-9 pr-24 text-sm"
             aria-label="Global search"
+            aria-expanded={searchOpen && query.trim().length >= 2}
+            aria-controls="global-search-results"
           />
-          <kbd className="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">Ctrl K</kbd>
+          <kbd className="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground sm:block">Ctrl K</kbd>
           {searchOpen && query.trim().length >= 2 && (
             <>
+              {/* invisible click-catcher: tap-away dismisses the results panel */}
               <div className="fixed inset-0 z-30" onClick={() => setSearchOpen(false)} />
-              <div className="absolute inset-x-0 top-full z-40 mt-1.5 max-h-96 overflow-y-auto rounded-xl border bg-popover p-2 shadow-xl">
+              <div
+                id="global-search-results"
+                role="region"
+                aria-label="Search results"
+                className="absolute inset-x-0 top-full z-40 mt-2 max-h-96 overflow-y-auto rounded-xl border bg-popover p-2 shadow-xl"
+              >
                 {!results && <p className="px-2 py-3 text-sm text-muted-foreground">Searching…</p>}
                 {results && results.jobs.length === 0 && results.people.length === 0 && (
                   <p className="px-2 py-3 text-sm text-muted-foreground">No matches for &ldquo;{query.trim()}&rdquo;.</p>
                 )}
                 {results && results.jobs.length > 0 && (
-                  <section className="mb-1">
+                  <section className="mb-1" aria-label="Matching jobs">
                     <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Jobs</p>
                     {results.jobs.map((b) => (
                       <button
@@ -308,7 +318,7 @@ export function AdminApp({
                   </section>
                 )}
                 {results && results.people.length > 0 && (
-                  <section>
+                  <section aria-label="Matching people">
                     <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">People</p>
                     {results.people.map((p) => (
                       <button
@@ -324,7 +334,7 @@ export function AdminApp({
                           {p.role === 'driver' ? `operator · ${p.vetting_status.replace('_', ' ')}` : `customer · ${p.municipality ?? '—'} · ${ghs(p.wallet_balance)}`}
                           {p.phone ? ` · ${p.phone.slice(0, 3)}•••` : ''}
                         </span>
-                        {p.account_status === 'restricted' && <Badge variant="outline" className="h-5 border-destructive/40 px-1.5 text-[10px] text-destructive">restricted</Badge>}
+                        {p.account_status === 'restricted' && <Badge variant="outline" className="h-5 border-destructive/40 px-2 text-[10px] text-destructive">restricted</Badge>}
                         <UserRound className="h-3 w-3 shrink-0 text-muted-foreground" />
                       </button>
                     ))}
@@ -337,23 +347,23 @@ export function AdminApp({
 
         <Tabs value={tab} onValueChange={(v) => { setTab(v); setHighlightId(null) }}>
           <TabsList className="mb-6 flex h-11 w-full justify-start overflow-x-auto sm:w-auto">
-            <TabsTrigger value="today" className="gap-1.5">
+            <TabsTrigger value="today" className="gap-2">
               <TimerReset className="h-4 w-4" /> Today
-              {decisionsWaiting > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5">{decisionsWaiting}</Badge>}
+              {decisionsWaiting > 0 && <Badge variant="destructive" className="ml-1 h-5 px-2">{decisionsWaiting}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-1.5"><TrendingUp className="h-4 w-4" /> Analytics</TabsTrigger>
-            <TabsTrigger value="operations" className="gap-1.5"><MapPin className="h-4 w-4" /> Operations</TabsTrigger>
-            <TabsTrigger value="operators" className="gap-1.5">
+            <TabsTrigger value="analytics" className="gap-2"><TrendingUp className="h-4 w-4" /> Analytics</TabsTrigger>
+            <TabsTrigger value="operations" className="gap-2"><MapPin className="h-4 w-4" /> Operations</TabsTrigger>
+            <TabsTrigger value="operators" className="gap-2">
               <Truck className="h-4 w-4" /> Operators
-              {pendingVets.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{pendingVets.length}</Badge>}
+              {pendingVets.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-2">{pendingVets.length}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="customers" className="gap-1.5"><Users className="h-4 w-4" /> Customers</TabsTrigger>
-            <TabsTrigger value="platform" className="gap-1.5">
+            <TabsTrigger value="customers" className="gap-2"><Users className="h-4 w-4" /> Customers</TabsTrigger>
+            <TabsTrigger value="platform" className="gap-2">
               <Cog className="h-4 w-4" /> Platform
-              {(k?.openReports ?? 0) > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5">{k?.openReports}</Badge>}
+              {(k?.openReports ?? 0) > 0 && <Badge variant="secondary" className="ml-1 h-5 px-2">{k?.openReports}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="reports" className="gap-1.5"><FileSpreadsheet className="h-4 w-4" /> Reports</TabsTrigger>
-            <TabsTrigger value="audit" className="gap-1.5"><History className="h-4 w-4" /> Audit</TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2"><FileSpreadsheet className="h-4 w-4" /> Reports</TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2"><History className="h-4 w-4" /> Audit</TabsTrigger>
           </TabsList>
 
           {/* =============== TODAY =============== */}
@@ -366,16 +376,17 @@ export function AdminApp({
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-1.5 text-base"><ShieldCheck className="h-4 w-4 text-primary" /> Needs your decision</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-primary" /> Needs your decision</CardTitle>
                 <p className="text-xs text-muted-foreground">Ranked by urgency. Every action is recorded in the audit trail. Humans decide — the system only surfaces.</p>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* operator vetting */}
-                <section>
+                <section aria-label="Operator vetting">
                   <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Operator vetting {pendingVets.length > 0 && <Badge variant="destructive" className="h-5 px-1.5">{pendingVets.length}</Badge>}
+                    Operator vetting {pendingVets.length > 0 && <Badge variant="destructive" className="h-5 px-2">{pendingVets.length}</Badge>}
                   </h3>
                   {pendingVets.length === 0 && <p className="py-1 text-sm text-muted-foreground">No operators awaiting verification.</p>}
+                  {pendingVets.length > 0 && (
                   <div className="space-y-2">
                     {pendingVets.map((d) => (
                       <div key={d.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
@@ -400,27 +411,29 @@ export function AdminApp({
                       </div>
                     ))}
                   </div>
+                  )}
                 </section>
 
                 {/* disposal review */}
-                <section>
+                <section aria-label="Disposal review queue">
                   <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Disposal review queue {pendingReviews.length > 0 && <Badge variant="destructive" className="h-5 px-1.5">{pendingReviews.length}</Badge>}
+                    Disposal review queue {pendingReviews.length > 0 && <Badge variant="destructive" className="h-5 px-2">{pendingReviews.length}</Badge>}
                   </h3>
                   {pendingReviews.length === 0 && <p className="py-1 text-sm text-muted-foreground">All disposal proofs reviewed.</p>}
+                  {data && data.reviewQueue.length > 0 && (
                   <div className="space-y-2">
-                    {data?.reviewQueue.map((r) => (
+                    {data.reviewQueue.map((r) => (
                       <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold">
                             {r.reference} · {r.driverName} <span className="font-normal text-muted-foreground">→ {r.siteName}</span>
                           </p>
-                          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                            <Badge variant="outline" className={cn('h-5 px-1.5', r.withinGeofence ? 'border-emerald-300 text-emerald-700' : 'border-destructive/40 text-destructive')}>
+                          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className={cn('h-5 px-2', r.withinGeofence ? 'border-emerald-300 text-emerald-700' : 'border-destructive/40 text-destructive')}>
                               {r.withinGeofence ? `geofence ok${r.distanceM !== null ? ` · ${Math.round(r.distanceM)} m` : ''}` : `outside fence${r.distanceM !== null ? ` · ${Math.round(r.distanceM)} m` : ''}`}
                             </Badge>
-                            <Badge variant="outline" className={cn('h-5 px-1.5', r.hasPhoto ? 'border-emerald-300 text-emerald-700' : 'border-border')}>{r.hasPhoto ? 'photo' : 'no photo'}</Badge>
-                            <Badge variant="outline" className={cn('h-5 px-1.5', r.hasTicket ? 'border-emerald-300 text-emerald-700' : 'border-border')}>{r.hasTicket ? 'ticket' : 'no ticket'}</Badge>
+                            <Badge variant="outline" className={cn('h-5 px-2', r.hasPhoto ? 'border-emerald-300 text-emerald-700' : 'border-border')}>{r.hasPhoto ? 'photo' : 'no photo'}</Badge>
+                            <Badge variant="outline" className={cn('h-5 px-2', r.hasTicket ? 'border-emerald-300 text-emerald-700' : 'border-border')}>{r.hasTicket ? 'ticket' : 'no ticket'}</Badge>
                             <span>{num(r.weightKg, 1)} kg · {num(r.recyclablesKg, 1)} kg recyclables</span>
                           </p>
                         </div>
@@ -439,17 +452,18 @@ export function AdminApp({
                       </div>
                     ))}
                   </div>
+                  )}
                 </section>
 
                 {/* suspended / rejected operators */}
                 {otherVets.length > 0 && (
-                  <section>
+                  <section aria-label="Restricted operators">
                     <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Restricted operators</h3>
                     <div className="space-y-2">
                       {otherVets.map((d) => (
                         <div key={d.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/20 bg-destructive/[0.03] p-3">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold">{d.full_name} <Badge variant="outline" className="ml-1 h-5 border-destructive/40 px-1.5 text-destructive">{d.vetting_status.replace('_', ' ')}</Badge></p>
+                            <p className="text-sm font-semibold">{d.full_name} <Badge variant="outline" className="ml-1 h-5 border-destructive/40 px-2 text-destructive">{d.vetting_status.replace('_', ' ')}</Badge></p>
                             <p className="text-xs text-muted-foreground">{d.vehicle_plate ?? '—'} · {d.vetting_note ?? 'no note'}</p>
                           </div>
                           <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => act({ action: 'vet_driver', driverId: d.id, decision: 'reinstate', note: 'Reinstated after review' }, `reinstate-${d.id}`)}>
@@ -466,14 +480,14 @@ export function AdminApp({
             {/* latest actions */}
             {data && data.auditEvents.length > 0 && (
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-1.5 text-base"><History className="h-4 w-4 text-primary" /> Latest staff actions</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><History className="h-4 w-4 text-primary" /> Latest staff actions</CardTitle></CardHeader>
                 <CardContent>
-                  <ul className="space-y-1.5 text-sm">
+                  <ul className="space-y-2 text-sm">
                     {data.auditEvents.slice(0, 5).map((e) => (
                       <li key={e.id} className="flex flex-wrap items-baseline gap-2">
                         <span className="text-xs text-muted-foreground">{timeAgo(e.createdAt)}</span>
                         <span className="font-medium">{e.actorName}</span>
-                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{e.action}</code>
+                        <code className="rounded bg-muted px-2 py-1 text-xs">{e.action}</code>
                         <span className="min-w-0 truncate text-xs text-muted-foreground">
                           {Object.entries(e.details ?? {}).map(([key, value]) => `${key}: ${String(value)}`).join(' · ')}
                         </span>
@@ -495,7 +509,7 @@ export function AdminApp({
                     key={d}
                     onClick={() => setDays(d)}
                     className={cn(
-                      'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      'rounded-md px-3 py-2 text-xs font-medium transition-colors',
                       days === d ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
                     )}
                   >
@@ -512,7 +526,7 @@ export function AdminApp({
 
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-1.5 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Commission revenue</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Commission revenue</CardTitle></CardHeader>
                 <CardContent>
                   {data ? (
                     <>
@@ -527,7 +541,7 @@ export function AdminApp({
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-1.5 text-base"><Users className="h-4 w-4 text-primary" /> New accounts</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4 text-primary" /> New accounts</CardTitle></CardHeader>
                 <CardContent>
                   {data ? (
                     <>
@@ -604,7 +618,8 @@ export function AdminApp({
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">Live job list — click a row for the full timeline</CardTitle></CardHeader>
               <CardContent className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-sm">
+                <table className="w-full min-w-180 text-sm">
+                  <caption className="sr-only">Recent jobs — click or press Enter on a row to open the full timeline</caption>
                   <thead>
                     <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="pb-2 pr-3">Ref</th>
@@ -621,19 +636,30 @@ export function AdminApp({
                       <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">{!data ? 'Loading…' : 'No bookings'}</td></tr>
                     )}
                     {data?.recentBookings.map((b) => (
-                      <tr key={b.id} className="cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/50" onClick={() => setDetail(b)}>
-                        <td className="py-2.5 pr-3 font-mono text-xs">{b.reference}</td>
-                        <td className="py-2.5 pr-3">{b.customer?.full_name ?? '—'}</td>
-                        <td className="py-2.5 pr-3 text-muted-foreground">{b.municipality}</td>
-                        <td className="py-2.5 pr-3 text-muted-foreground">{b.driver?.full_name ?? '—'}</td>
-                        <td className="py-2.5 pr-3"><StatusBadge status={b.status} /></td>
-                        <td className="py-2.5 pr-3 tabular-nums">{b.amount_ghs > 0 ? ghs(b.amount_ghs) : 'Plan'}</td>
-                        <td className="py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <tr
+                        key={b.id}
+                        tabIndex={0}
+                        className="cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-2"
+                        onClick={() => setDetail(b)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            setDetail(b)
+                          }
+                        }}
+                      >
+                        <td className="py-2 pr-3 font-mono text-xs">{b.reference}</td>
+                        <td className="py-2 pr-3">{b.customer?.full_name ?? '—'}</td>
+                        <td className="py-2 pr-3 text-muted-foreground">{b.municipality}</td>
+                        <td className="py-2 pr-3 text-muted-foreground">{b.driver?.full_name ?? '—'}</td>
+                        <td className="py-2 pr-3"><StatusBadge status={b.status} /></td>
+                        <td className="py-2 pr-3 tabular-nums">{b.amount_ghs > 0 ? ghs(b.amount_ghs) : 'Plan'}</td>
+                        <td className="py-2" onClick={(e) => e.stopPropagation()}>
                           {b.status === 'pending' && (
                             <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setDispatchFor(b)}>Dispatch</Button>
                           )}
                           {b.status === 'assigned' && (
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-2">
                               <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setDispatchFor(b)}>Move</Button>
                               <Button size="sm" variant="outline" className="h-7 gap-1 border-destructive/40 text-xs text-destructive" onClick={() => act({ action: 'cancel_booking', bookingId: b.id, reason: 'Cancelled from operations console' }, `cancel-${b.id}`)}>Cancel</Button>
                             </div>
@@ -695,7 +721,8 @@ export function AdminApp({
                 </p>
               </CardHeader>
               <CardContent className="overflow-x-auto">
-                <table className="w-full min-w-[680px] text-sm">
+                <table className="w-full min-w-170 text-sm">
+                  <caption className="sr-only">Integrity watchlist — risk signals per operator, highest risk first</caption>
                   <thead>
                     <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="pb-2 pr-3">Operator</th>
@@ -712,15 +739,15 @@ export function AdminApp({
                     )}
                     {data?.integrity.map((r) => (
                       <tr key={r.driverId} className="border-b last:border-0">
-                        <td className="py-2.5 pr-3">
+                        <td className="py-2 pr-3">
                           <span className="font-medium">{r.fullName}</span>
                           {r.flags.length > 0 && <span className="block text-[11px] text-destructive">{r.flags.join(' · ')}</span>}
                         </td>
-                        <td className="py-2.5 pr-3 tabular-nums">{r.completed}</td>
-                        <td className="py-2.5 pr-3 tabular-nums">{r.verificationPct === null ? '—' : `${r.verificationPct}%`}</td>
-                        <td className="py-2.5 pr-3 tabular-nums">{r.cancelAfterAssign}</td>
-                        <td className={cn('py-2.5 pr-3 tabular-nums', r.repeatCustomers > 0 && 'font-semibold text-destructive')}>{r.repeatCustomers}</td>
-                        <td className="py-2.5">
+                        <td className="py-2 pr-3 tabular-nums">{r.completed}</td>
+                        <td className="py-2 pr-3 tabular-nums">{r.verificationPct === null ? '—' : `${r.verificationPct}%`}</td>
+                        <td className="py-2 pr-3 tabular-nums">{r.cancelAfterAssign}</td>
+                        <td className={cn('py-2 pr-3 tabular-nums', r.repeatCustomers > 0 && 'font-semibold text-destructive')}>{r.repeatCustomers}</td>
+                        <td className="py-2">
                           <Badge variant="outline" className={cn(
                             r.score >= 80 && 'border-emerald-300 text-emerald-700',
                             r.score >= 50 && r.score < 80 && 'border-gold/40 text-gold-foreground',
@@ -739,7 +766,8 @@ export function AdminApp({
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">Operator register</CardTitle></CardHeader>
               <CardContent className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-sm">
+                <table className="w-full min-w-190 text-sm">
+                  <caption className="sr-only">Operator register — vehicles, status, jobs, rating and earnings</caption>
                   <thead>
                     <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="pb-2 pr-3">Operator</th>
@@ -758,7 +786,7 @@ export function AdminApp({
                     )}
                     {data?.drivers.map((d) => (
                       <tr key={d.id} className={cn('border-b last:border-0', highlightId === d.id && 'bg-primary/5 ring-1 ring-inset ring-primary/40')}>
-                        <td className="py-2.5 pr-3">
+                        <td className="py-2 pr-3">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-7 w-7">
                               <AvatarFallback className="bg-primary/10 text-[10px] font-bold text-primary">{initials(d.full_name)}</AvatarFallback>
@@ -766,19 +794,19 @@ export function AdminApp({
                             <span className="font-medium">{d.full_name}</span>
                           </div>
                         </td>
-                        <td className="py-2.5 pr-3 text-muted-foreground">{d.vehicle_plate ?? '—'}</td>
-                        <td className="py-2.5 pr-3 text-muted-foreground">{d.base_municipality ?? d.municipality ?? '—'}</td>
-                        <td className="py-2.5 pr-3">
+                        <td className="py-2 pr-3 text-muted-foreground">{d.vehicle_plate ?? '—'}</td>
+                        <td className="py-2 pr-3 text-muted-foreground">{d.base_municipality ?? d.municipality ?? '—'}</td>
+                        <td className="py-2 pr-3">
                           <Badge variant="outline" className={cn('gap-1', d.is_online ? 'border-emerald-300 text-emerald-700' : 'border-border text-muted-foreground')}>
                             <Radio className="h-3 w-3" /> {d.is_online ? 'Online' : 'Offline'}
                           </Badge>
                         </td>
-                        <td className="py-2.5 pr-3">
+                        <td className="py-2 pr-3">
                           <VettingBadge status={d.vetting_status} />
                         </td>
-                        <td className="py-2.5 pr-3 tabular-nums">{d.total_jobs}</td>
-                        <td className="py-2.5 pr-3 tabular-nums">{d.rating.toFixed(1)} ★</td>
-                        <td className="py-2.5 font-semibold tabular-nums">{ghs(d.total_earnings)}</td>
+                        <td className="py-2 pr-3 tabular-nums">{d.total_jobs}</td>
+                        <td className="py-2 pr-3 tabular-nums">{d.rating.toFixed(1)} ★</td>
+                        <td className="py-2 font-semibold tabular-nums">{ghs(d.total_earnings)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -799,7 +827,7 @@ export function AdminApp({
           {/* =============== PLATFORM =============== */}
           <TabsContent value="platform">
             {data ? (
-              <PlatformTab data={data} busy={busy} act={act} highlightId={null} />
+              <PlatformTab data={data} busy={busy} act={act} />
             ) : (
               <Skeleton className="h-64 w-full" />
             )}
@@ -808,7 +836,7 @@ export function AdminApp({
           {/* =============== REPORTS =============== */}
           <TabsContent value="reports">
             {data ? (
-              <ReportsTab data={data} busy={busy} act={act} highlightId={null} />
+              <ReportsTab data={data} busy={busy} act={act} />
             ) : (
               <Skeleton className="h-64 w-full" />
             )}
@@ -822,7 +850,8 @@ export function AdminApp({
                 <p className="text-xs text-muted-foreground">Every staff action on money, operators, jobs, settings and sites — append-only, kept for 2+ years (spec 21). Download the full export on the Reports tab.</p>
               </CardHeader>
               <CardContent className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm">
+                <table className="w-full min-w-160 text-sm">
+                  <caption className="sr-only">Audit trail — every staff action, append-only</caption>
                   <thead>
                     <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                       <th className="pb-2 pr-3">When</th>
@@ -838,11 +867,11 @@ export function AdminApp({
                     )}
                     {data?.auditEvents.map((e) => (
                       <tr key={e.id} className="border-b last:border-0">
-                        <td className="py-2.5 pr-3 text-xs text-muted-foreground">{timeAgo(e.createdAt)}</td>
-                        <td className="py-2.5 pr-3 font-medium">{e.actorName}</td>
-                        <td className="py-2.5 pr-3"><code className="rounded bg-muted px-1.5 py-0.5 text-xs">{e.action}</code></td>
-                        <td className="py-2.5 pr-3 text-xs text-muted-foreground">{e.targetType || '—'}</td>
-                        <td className="py-2.5 text-xs text-muted-foreground">
+                        <td className="py-2 pr-3 text-xs text-muted-foreground">{timeAgo(e.createdAt)}</td>
+                        <td className="py-2 pr-3 font-medium">{e.actorName}</td>
+                        <td className="py-2 pr-3"><code className="rounded bg-muted px-2 py-1 text-xs">{e.action}</code></td>
+                        <td className="py-2 pr-3 text-xs text-muted-foreground">{e.targetType || '—'}</td>
+                        <td className="py-2 text-xs text-muted-foreground">
                           {Object.entries(e.details ?? {}).map(([key, value]) => `${key}: ${String(value)}`).join(' · ') || '—'}
                         </td>
                       </tr>
@@ -865,7 +894,7 @@ export function AdminApp({
                 <DialogDescription>{detail.customer?.full_name ?? '—'} · {detail.municipality}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 text-sm">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                   <Field label="Address" value={detail.address} />
                   <Field label="Pickup code" value={detail.pickup_code} mono />
                   <Field label="Waste" value={`${detail.waste_size.replace('_', ' ')} · ~${detail.estimated_kg} kg`} />
@@ -878,7 +907,7 @@ export function AdminApp({
                 {detail.notes && <p className="rounded-md bg-muted p-2 text-xs italic text-muted-foreground">&ldquo;{detail.notes}&rdquo;</p>}
                 <div>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lifecycle</p>
-                  <ol className="space-y-1.5">
+                  <ol className="space-y-2">
                     {([
                       ['Booked', detail.created_at],
                       ['Assigned', detail.assigned_at],
@@ -919,7 +948,7 @@ export function AdminApp({
                 {dispatchableDrivers.map((d) => (
                   <button
                     key={d.id}
-                    className="flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-colors hover:bg-muted/60 disabled:opacity-50"
+                    className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/60 disabled:opacity-50"
                     disabled={busy !== null}
                     onClick={async () => {
                       const ok = await act({ action: 'dispatch', bookingId: dispatchFor.id, driverId: d.id }, `dispatch-${dispatchFor.id}`)
@@ -949,7 +978,7 @@ export function AdminApp({
             <DialogTitle className="text-base">{drill} — recent jobs</DialogTitle>
             <DialogDescription>From the most recent 500 bookings.</DialogDescription>
           </DialogHeader>
-          <div className="max-h-80 space-y-1.5 overflow-y-auto text-sm">
+          <div className="max-h-80 space-y-2 overflow-y-auto text-sm">
             {data?.recentBookings.filter((b) => b.municipality === drill).map((b) => (
               <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg border p-2 text-xs">
                 <span className="font-mono">{b.reference}</span>
@@ -1018,7 +1047,7 @@ function VettingBadge({ status }: { status: Profile['vetting_status'] }) {
     rejected: { label: 'Rejected', cls: 'border-destructive/40 text-destructive' },
     suspended: { label: 'Suspended', cls: 'border-destructive/40 text-destructive' },
   }
-  return <Badge variant="outline" className={cn('h-5 px-1.5 text-[11px]', map[status].cls)}>{map[status].label}</Badge>
+  return <Badge variant="outline" className={cn('h-5 px-2 text-[11px]', map[status].cls)}>{map[status].label}</Badge>
 }
 
 function HealthTile({
@@ -1042,7 +1071,7 @@ function HealthTile({
       state === 'bad' && 'border-l-destructive'
     )}>
       <CardContent className="p-4">
-        <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Icon className="h-3.5 w-3.5 text-primary" /> {label}
           <span className={cn(
             'ml-auto h-2 w-2 rounded-full',
@@ -1050,9 +1079,10 @@ function HealthTile({
             state === 'warn' && 'bg-gold',
             state === 'bad' && 'bg-destructive'
           )} />
+          <span className="sr-only">{state === 'ok' ? 'OK' : state === 'warn' ? 'Warning' : 'Critical'}</span>
         </div>
         <p className="font-display text-xl font-bold tabular-nums sm:text-2xl">{value}</p>
-        {hint && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</p>}
+        {hint && <p className="mt-1 truncate text-[11px] text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
   )

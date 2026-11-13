@@ -188,6 +188,8 @@ export interface AdminDashboardPayload {
     recyclablesKg: number
     verificationRate: number
     revenueCommission: number
+    /** commission + institutional dashboard fees, year to date — single source of truth lives in /api/admin */
+    revenueYtd: number
     driverPayouts: number
     pendingJobs: number
     openReports: number

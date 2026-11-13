@@ -3,7 +3,8 @@
 // KumBola Command Centre — v3 tabs: Customers · Platform · Reports
 // Customers: wallet adjustments, block/unblock, direct messages (spec 7/10)
 // Platform:  feature flags, pricing, broadcasts, dumping triage, health (spec 11/14/20/23)
-// Reports:   controlled CSV exports with stated reason + audit logging (spec 16)
+// v4 (Task 20) refactor: print CSS moved to globals (no-print fixed), semantic
+// tables (caption/scope), labelled inputs and icon buttons, 4/8px spacing grid.
 
 import { useState } from "react"
 import {
@@ -23,14 +24,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { useSession } from '@/lib/store'
 import { ghs, num, timeAgo, initials } from '@/lib/format'
-import type { AdminDashboardPayload, Profile, DumpingReport } from '@/lib/types'
+import type { AdminDashboardPayload, Profile } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export interface TabProps {
   data: AdminDashboardPayload
   busy: string | null
   act: (body: Record<string, unknown>, label: string) => Promise<boolean>
-  highlightId: string | null
+  /** only consumers that highlight a searched row pass this */
+  highlightId?: string | null
 }
 
 function maskPhone(p: string | null): string {
@@ -69,18 +71,19 @@ export function CustomersTab({ data, busy, act, highlightId }: TabProps) {
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-1.5 text-base">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Users className="h-4 w-4 text-primary" /> Customer register
-              {restrictedCount > 0 && <Badge variant="outline" className="ml-1 h-5 border-destructive/40 px-1.5 text-destructive">{restrictedCount} restricted</Badge>}
+              {restrictedCount > 0 && <Badge variant="outline" className="ml-1 h-5 border-destructive/40 px-2 text-destructive">{restrictedCount} restricted</Badge>}
             </CardTitle>
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by name, phone, area…" className="h-9 w-64" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by name, phone, area…" className="h-9 w-64" aria-label="Filter customers" />
           </div>
           <p className="text-xs text-muted-foreground">
             Wallet corrections go through the ledger with a reason. Restricting an account pauses new bookings — never silent, always audited (spec 7/10).
           </p>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
+          <table className="w-full min-w-215 text-sm">
+            <caption className="sr-only">Customer register with wallets, plans and account status</caption>
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="pb-2 pr-3">Customer</th>
@@ -99,7 +102,7 @@ export function CustomersTab({ data, busy, act, highlightId }: TabProps) {
               )}
               {filtered.map((c) => (
                 <tr key={c.id} className={cn('border-b last:border-0', highlightId === c.id && 'bg-primary/5 ring-1 ring-inset ring-primary/40')}>
-                  <td className="py-2.5 pr-3">
+                  <td className="py-2 pr-3">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-7 w-7">
                         <AvatarFallback className="bg-primary/10 text-[10px] font-bold text-primary">{initials(c.full_name)}</AvatarFallback>
@@ -112,18 +115,18 @@ export function CustomersTab({ data, busy, act, highlightId }: TabProps) {
                       </div>
                     </div>
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-xs text-muted-foreground">{maskPhone(c.phone)}</td>
-                  <td className="py-2.5 pr-3 capitalize text-muted-foreground">{c.account_type ?? '—'}</td>
-                  <td className="py-2.5 pr-3 text-muted-foreground">{c.municipality ?? '—'}</td>
-                  <td className="py-2.5 pr-3 text-muted-foreground">{c.plan_id ? planName.get(c.plan_id) ?? c.plan_id : 'Pay-as-you-go'}{c.plan_credits > 0 && <span className="ml-1 text-primary">({c.plan_credits} left)</span>}</td>
-                  <td className="py-2.5 pr-3 font-semibold tabular-nums">{ghs(c.wallet_balance)}</td>
-                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">{timeAgo(c.created_at)}</td>
-                  <td className="py-2.5">
+                  <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">{maskPhone(c.phone)}</td>
+                  <td className="py-2 pr-3 capitalize text-muted-foreground">{c.account_type ?? '—'}</td>
+                  <td className="py-2 pr-3 text-muted-foreground">{c.municipality ?? '—'}</td>
+                  <td className="py-2 pr-3 text-muted-foreground">{c.plan_id ? planName.get(c.plan_id) ?? c.plan_id : 'Pay-as-you-go'}{c.plan_credits > 0 && <span className="ml-1 text-primary">({c.plan_credits} left)</span>}</td>
+                  <td className="py-2 pr-3 font-semibold tabular-nums">{ghs(c.wallet_balance)}</td>
+                  <td className="py-2 pr-3 text-xs text-muted-foreground">{timeAgo(c.created_at)}</td>
+                  <td className="py-2">
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={busy !== null} onClick={() => { setWalletFor(c); setWalletAmount(''); setWalletReason('') }} title="Adjust wallet">
                         <Wallet className="h-3.5 w-3.5" /> Wallet
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={busy !== null} onClick={() => { setMessageFor(c); setMsgTitle(''); setMsgBody('') }} title="Send a message">
+                      <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" disabled={busy !== null} onClick={() => { setMessageFor(c); setMsgTitle(''); setMsgBody('') }} title="Send a message" aria-label="Send a message">
                         <MessageSquare className="h-3.5 w-3.5" />
                       </Button>
                       {c.account_status === 'restricted' ? (
@@ -131,7 +134,7 @@ export function CustomersTab({ data, busy, act, highlightId }: TabProps) {
                           <ShieldCheck className="h-3.5 w-3.5" /> Restore
                         </Button>
                       ) : (
-                        <Button size="sm" variant="outline" className="h-7 gap-1 border-destructive/40 px-2 text-xs text-destructive" disabled={busy !== null} onClick={() => { setBlockFor(c); setBlockReason('') }} title="Restrict account">
+                        <Button size="sm" variant="outline" className="h-7 gap-1 border-destructive/40 px-2 text-xs text-destructive" disabled={busy !== null} onClick={() => { setBlockFor(c); setBlockReason('') }} title="Restrict account" aria-label="Restrict account">
                           <Ban className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -154,11 +157,11 @@ export function CustomersTab({ data, busy, act, highlightId }: TabProps) {
                 <DialogDescription>Current balance {ghs(walletFor.wallet_balance)}. The entry is added to the ledger — never edited later.</DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="wallet-amount">Amount (GHS) — negative to debit</Label>
                   <Input id="wallet-amount" type="number" step="0.01" value={walletAmount} onChange={(e) => setWalletAmount(e.target.value)} placeholder="e.g. 50 or -25" />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="wallet-reason">Reason (recorded and sent to the customer)</Label>
                   <Textarea id="wallet-reason" value={walletReason} onChange={(e) => setWalletReason(e.target.value)} placeholder="e.g. missed pickup credit for KB-100023" rows={2} />
                 </div>
@@ -192,11 +195,11 @@ export function CustomersTab({ data, busy, act, highlightId }: TabProps) {
                 <DialogDescription>Delivered to the customer&apos;s notification inbox instantly.</DialogDescription>
               </DialogHeader>
               <div className="space-y-3">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="msg-title">Title</Label>
                   <Input id="msg-title" value={msgTitle} onChange={(e) => setMsgTitle(e.target.value)} placeholder="e.g. Your pickup is rescheduled" />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="msg-body">Message</Label>
                   <Textarea id="msg-body" value={msgBody} onChange={(e) => setMsgBody(e.target.value)} placeholder="Keep it short and helpful…" rows={3} />
                 </div>
@@ -275,7 +278,7 @@ export function PlatformTab({ data, busy, act }: TabProps) {
         {/* feature flags */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-1.5 text-base"><Cog className="h-4 w-4 text-primary" /> Feature flags &amp; kill switches</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><Cog className="h-4 w-4 text-primary" /> Feature flags &amp; kill switches</CardTitle>
             <p className="text-xs text-muted-foreground">Takes effect on the next request — no redeploy. Every change is recorded (spec 20).</p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -285,9 +288,9 @@ export function PlatformTab({ data, busy, act }: TabProps) {
               return (
                 <div key={f.key} className="flex items-start gap-3 rounded-lg border p-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{f.label} <Badge variant="outline" className={cn('ml-1 h-5 px-1.5', on ? 'border-emerald-300 text-emerald-700' : 'border-gold/40 text-gold-foreground')}>{on ? f.on : f.off}</Badge></p>
+                    <p className="text-sm font-semibold">{f.label} <Badge variant="outline" className={cn('ml-1 h-5 px-2', on ? 'border-emerald-300 text-emerald-700' : 'border-gold/40 text-gold-foreground')}>{on ? f.on : f.off}</Badge></p>
                     <p className="text-xs text-muted-foreground">{f.desc}</p>
-                    {s && <p className="mt-0.5 text-[11px] text-muted-foreground">Last changed by {s.updatedByName} · {timeAgo(s.updatedAt)}</p>}
+                    {s && <p className="mt-1 text-[11px] text-muted-foreground">Last changed by {s.updatedByName} · {timeAgo(s.updatedAt)}</p>}
                   </div>
                   <Switch checked={on} disabled={busy !== null} onCheckedChange={(v) => act({ action: 'set_flag', key: f.key, value: v ? 'true' : 'false' }, `flag-${f.key}`)} aria-label={`Toggle ${f.label}`} />
                 </div>
@@ -299,14 +302,14 @@ export function PlatformTab({ data, busy, act }: TabProps) {
         {/* system health */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-1.5 text-base"><Radio className="h-4 w-4 text-primary" /> System health</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><Radio className="h-4 w-4 text-primary" /> System health</CardTitle>
             <p className="text-xs text-muted-foreground">Integration status as seen by the live portal (spec 23).</p>
           </CardHeader>
-          <CardContent className="space-y-2.5 text-sm">
+          <CardContent className="space-y-3 text-sm">
             <HealthRow ok={data.integrations.supabase} label="Supabase database" okText="Connected" badText="Unreachable" hint="auth · data · ledger" />
             <HealthRow ok={data.integrations.paystack} label="Paystack payments" okText="Live keys active" badText="Simulation mode" hint={data.integrations.paystack ? 'collections + webhook' : 'add PAYSTACK_SECRET_KEY to go live'} />
             <HealthRow ok={data.integrations.sms} label="SMS / WhatsApp (Arkesel)" okText="Configured" badText="Not configured" hint="blueprint Phase 2 — notifications are in-app for now" />
-            <div className="flex items-center gap-2 rounded-lg border p-2.5">
+            <div className="flex items-center gap-2 rounded-lg border p-3">
               <Landmark className="h-4 w-4 text-primary" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium">Cloudflare Worker</p>
@@ -320,7 +323,7 @@ export function PlatformTab({ data, busy, act }: TabProps) {
         {/* pricing */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-1.5 text-base"><CreditCard className="h-4 w-4 text-primary" /> Plans &amp; pricing</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><CreditCard className="h-4 w-4 text-primary" /> Plans &amp; pricing</CardTitle>
             <p className="text-xs text-muted-foreground">Edits go live immediately and are audited with before/after values (spec 11 price book).</p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -336,12 +339,12 @@ export function PlatformTab({ data, busy, act }: TabProps) {
                     <p className="text-xs text-muted-foreground">{p.target ?? '—'}</p>
                   </div>
                   <div className="w-24">
-                    <Label className="text-[10px] uppercase text-muted-foreground">GHS / mo</Label>
-                    <Input className="h-8" type="number" step="1" value={d.price} onChange={(e) => setDrafts((s) => ({ ...s, [p.id]: { ...d, price: e.target.value } }))} />
+                    <Label htmlFor={`plan-price-${p.id}`} className="text-[10px] uppercase text-muted-foreground">GHS / mo</Label>
+                    <Input id={`plan-price-${p.id}`} className="h-8" type="number" step="1" value={d.price} onChange={(e) => setDrafts((s) => ({ ...s, [p.id]: { ...d, price: e.target.value } }))} />
                   </div>
                   <div className="w-24">
-                    <Label className="text-[10px] uppercase text-muted-foreground">Pickups</Label>
-                    <Input className="h-8" type="number" step="1" value={d.pickups} onChange={(e) => setDrafts((s) => ({ ...s, [p.id]: { ...d, pickups: e.target.value } }))} />
+                    <Label htmlFor={`plan-pickups-${p.id}`} className="text-[10px] uppercase text-muted-foreground">Pickups</Label>
+                    <Input id={`plan-pickups-${p.id}`} className="h-8" type="number" step="1" value={d.pickups} onChange={(e) => setDrafts((s) => ({ ...s, [p.id]: { ...d, pickups: e.target.value } }))} />
                   </div>
                   <Button size="sm" className="h-8" disabled={!changed || busy !== null} onClick={() => act({ action: 'update_plan', planId: p.id, priceGhs: price, pickupsPerMonth: Number.isFinite(pickups) ? pickups : undefined }, `plan-${p.id}`)}>
                     Save
@@ -355,15 +358,15 @@ export function PlatformTab({ data, busy, act }: TabProps) {
         {/* broadcast */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-1.5 text-base"><Megaphone className="h-4 w-4 text-primary" /> Broadcast</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><Megaphone className="h-4 w-4 text-primary" /> Broadcast</CardTitle>
             <p className="text-xs text-muted-foreground">In-app notification to every selected account — delivered instantly (spec 14).</p>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs">Audience</Label>
                 <Select value={audience} onValueChange={(v) => setAudience(v as typeof audience)}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9" aria-label="Broadcast audience"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="customers">Customers ({data.customers.length})</SelectItem>
                     <SelectItem value="operators">Operators ({data.drivers.length})</SelectItem>
@@ -371,10 +374,10 @@ export function PlatformTab({ data, busy, act }: TabProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs">Tone</Label>
                 <Select value={bcKind} onValueChange={(v) => setBcKind(v as typeof bcKind)}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9" aria-label="Broadcast tone"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="info">Information</SelectItem>
                     <SelectItem value="success">Good news</SelectItem>
@@ -404,12 +407,12 @@ export function PlatformTab({ data, busy, act }: TabProps) {
       {/* dumping reports triage */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-1.5 text-base"><AlertTriangle className="h-4 w-4 text-primary" /> Illegal-dumping reports — triage</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><AlertTriangle className="h-4 w-4 text-primary" /> Illegal-dumping reports — triage</CardTitle>
           <p className="text-xs text-muted-foreground">Community reports routed to the responsible assembly. Move them through the pipeline as you verify.</p>
         </CardHeader>
         <CardContent className="space-y-2">
           {data.reports.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No reports</p>}
-          {data.reports.map((r: DumpingReport) => (
+          {data.reports.map((r) => (
             <div key={r.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
               <span className={cn(
                 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
@@ -443,7 +446,7 @@ export function PlatformTab({ data, busy, act }: TabProps) {
 
 function HealthRow({ ok, label, okText, badText, hint }: { ok: boolean; label: string; okText: string; badText: string; hint: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border p-2.5">
+    <div className="flex items-center gap-2 rounded-lg border p-3">
       <span className={cn('h-2 w-2 shrink-0 rounded-full', ok ? 'bg-emerald-500' : 'bg-gold')} />
       <div className="min-w-0 flex-1">
         <p className="font-medium">{label}</p>
@@ -508,18 +511,12 @@ export function ReportsTab({ data, busy }: TabProps) {
 
   return (
     <div className="space-y-4">
-      {/* print scope: only the executive summary sheet prints */}
-      <style>{`@media print {
-        body * { visibility: hidden; }
-        #print-summary, #print-summary * { visibility: visible; }
-        #print-summary { position: absolute; left: 0; top: 0; width: 100%; border: none; }
-      }`}</style>
-      {/* printable executive summary */}
-      <Card id="print-summary" className="border-primary/30">
+      {/* printable executive summary — print scope lives in globals.css (.print-sheet) */}
+      <Card className="print-sheet border-primary/30">
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-1.5 text-base"><FileSpreadsheet className="h-4 w-4 text-primary" /> Executive summary — Greater Kumasi</CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5 no-print" onClick={() => window.print()}>
+            <CardTitle className="flex items-center gap-2 text-base"><FileSpreadsheet className="h-4 w-4 text-primary" /> Executive summary — Greater Kumasi</CardTitle>
+            <Button size="sm" variant="outline" className="gap-2 no-print" onClick={() => window.print()}>
               <Printer className="h-3.5 w-3.5" /> Print summary
             </Button>
           </div>
@@ -531,7 +528,7 @@ export function ReportsTab({ data, busy }: TabProps) {
             <SummaryStat label="Verified tonnage" value={`${num(k.tonnesVerified, 1)} t`} />
             <SummaryStat label="Verification rate" value={`${k.verificationRate}%`} />
             <SummaryStat label="Recyclables" value={`${num(k.recyclablesKg)} kg`} />
-            <SummaryStat label="Platform revenue" value={ghs(k.revenueCommission + 1200, { compact: true })} />
+            <SummaryStat label="Platform revenue" value={ghs(k.revenueYtd, { compact: true })} />
             <SummaryStat label="Operator earnings" value={ghs(k.driverPayouts, { compact: true })} />
             <SummaryStat label="Accounts served" value={num(k.households + k.businesses + k.drivers)} />
             <SummaryStat label="Decisions waiting" value={num(decisions)} tone={decisions === 0 ? 'ok' : 'warn'} />
@@ -571,7 +568,7 @@ export function ReportsTab({ data, busy }: TabProps) {
                   </SelectContent>
                 </Select>
               )}
-              <Button size="sm" className="gap-1.5" disabled={busy !== null || downloading} onClick={() => { setExportFor(r.type); setReason('') }}>
+              <Button size="sm" className="gap-2" disabled={busy !== null || downloading} onClick={() => { setExportFor(r.type); setReason('') }}>
                 <Download className="h-3.5 w-3.5" /> CSV
               </Button>
             </div>

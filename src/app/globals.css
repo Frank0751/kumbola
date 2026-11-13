@@ -174,3 +174,24 @@
     background-size: 44px 44px;
   }
 }
+
+/* Print: the Command Centre executive summary sheet prints alone.
+   Marked with .print-sheet; controls inside it opt out with .no-print. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+  .print-sheet {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    border: none;
+  }
+  .print-sheet .no-print {
+    display: none;
+  }
+}

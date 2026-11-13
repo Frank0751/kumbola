@@ -1,10 +1,10 @@
 'use client'
 
 // Lightweight SVG charts for the KumBola Command Centre (no external deps).
-// Interactive: hover tooltips on the line chart, clickable bar lists,
-// native tooltips on the mini bars. Range and drill-down live in the parent.
+// Interactive: hover tooltips on the line chart, clickable (and keyboard-operable)
+// bar lists, native tooltips on the mini bars. Range and drill-down live in the parent.
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
 export function DailyChart({
   data,
@@ -12,7 +12,6 @@ export function DailyChart({
   data: { date: string; bookings: number; tonnes: number }[]
 }) {
   const [hover, setHover] = useState<number | null>(null)
-  const wrapRef = useRef<HTMLDivElement>(null)
   const W = 640
   const H = 200
   const PADX = 34
@@ -39,10 +38,10 @@ export function DailyChart({
   const hd = hover !== null ? data[hover] : null
 
   return (
-    <div className="relative w-full overflow-x-auto scroll-slim" ref={wrapRef}>
+    <div className="relative w-full overflow-x-auto scroll-slim">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="h-48 w-full min-w-[420px]"
+        className="h-48 w-full min-w-105"
         role="img"
         aria-label="Daily bookings and verified tonnage"
         onMouseMove={onMove}
@@ -70,21 +69,21 @@ export function DailyChart({
       </svg>
       {hover !== null && hd && (
         <div
-          className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-md border bg-popover px-2.5 py-1.5 text-xs shadow-md"
+          className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-md border bg-popover px-3 py-2 text-xs shadow-md"
           style={{ left: `${(x(hover) / W) * 100}%` }}
         >
           <p className="font-semibold">{hd.date}</p>
-          <p className="flex items-center gap-1.5 text-muted-foreground">
-            <span className="h-0.5 w-3 rounded bg-primary" /> {hd.tonnes} t verified
+          <p className="flex items-center gap-2 text-muted-foreground">
+            <span className="h-1 w-3 rounded bg-primary" /> {hd.tonnes} t verified
           </p>
-          <p className="flex items-center gap-1.5 text-muted-foreground">
-            <span className="h-0.5 w-3 rounded bg-[color:var(--chart-2)]" /> {hd.bookings} bookings
+          <p className="flex items-center gap-2 text-muted-foreground">
+            <span className="h-1 w-3 rounded bg-[color:var(--chart-2)]" /> {hd.bookings} bookings
           </p>
         </div>
       )}
       <div className="mt-1 flex gap-4 pl-8 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-primary" /> Verified tonnes</span>
-        <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-[color:var(--chart-2)]" /> Bookings</span>
+        <span className="flex items-center gap-2"><span className="h-1 w-4 rounded bg-primary" /> Verified tonnes</span>
+        <span className="flex items-center gap-2"><span className="h-1 w-4 rounded bg-[color:var(--chart-2)]" /> Bookings</span>
       </div>
     </div>
   )
@@ -105,9 +104,21 @@ export function BarList({
       {items.map((it) => (
         <div
           key={it.label}
-          className={onSelect ? 'cursor-pointer rounded-lg p-1 transition-colors hover:bg-muted/60' : undefined}
+          className={onSelect ? 'cursor-pointer rounded-lg p-1 transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-2' : undefined}
           onClick={onSelect ? () => onSelect(it.label) : undefined}
+          onKeyDown={
+            onSelect
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelect(it.label)
+                  }
+                }
+              : undefined
+          }
           role={onSelect ? 'button' : undefined}
+          tabIndex={onSelect ? 0 : undefined}
+          aria-label={onSelect ? `Show ${it.label} jobs` : undefined}
           title={onSelect ? `Show ${it.label} jobs` : undefined}
         >
           <div className="mb-1 flex items-center justify-between text-sm">
@@ -116,7 +127,7 @@ export function BarList({
               {it.value.toLocaleString('en-GH', { maximumFractionDigits: 1 })} {unit}{it.sub ? ` · ${it.sub}` : ''}
             </span>
           </div>
-          <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
               className="h-full rounded-full bg-gradient-to-r from-primary to-[color:var(--chart-3)]"
               style={{ width: `${Math.max(4, (it.value / max) * 100)}%` }}
@@ -152,7 +163,7 @@ export function MiniBars({
 
   return (
     <div className="w-full overflow-x-auto scroll-slim">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-40 w-full min-w-[420px]" role="img" aria-label="Daily series bar chart">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-40 w-full min-w-105" role="img" aria-label="Daily series bar chart">
         {[0, 1].map((f) => (
           <line key={f} x1={PADX} x2={W - PADX} y1={PADY + f * (H - PADY * 2)} y2={PADY + f * (H - PADY * 2)} className="stroke-border" strokeDasharray="3 4" />
         ))}
@@ -209,10 +220,10 @@ export function Donut({ slices }: { slices: { label: string; value: number; colo
           </circle>
         ))}
       </svg>
-      <ul className="min-w-0 flex-1 space-y-1.5 text-sm">
+      <ul className="min-w-0 flex-1 space-y-2 text-sm">
         {slices.map((s) => (
           <li key={s.label} className="flex items-center gap-2">
-            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.color.replace('stroke-', 'bg-')}`} />
+            <span className={`h-2 w-2 shrink-0 rounded-full ${s.color.replace('stroke-', 'bg-')}`} />
             <span className="min-w-0 flex-1 truncate">{s.label}</span>
             <span className="tabular-nums font-semibold">{s.value.toLocaleString()}</span>
             <span className="w-10 text-right tabular-nums text-muted-foreground">{Math.round((s.value / total) * 100)}%</span>

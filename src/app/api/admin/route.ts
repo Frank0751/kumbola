@@ -229,6 +229,7 @@ export async function GET(req: Request) {
         ? Math.round((bookings.filter((b) => b.status === 'verified').length / activeBookings.length) * 100)
         : 0,
       revenueCommission: Number(revenueCommission.toFixed(2)),
+      revenueYtd: Number((revenueCommission + dashboardFees).toFixed(2)),
       driverPayouts: Number(driverPayouts.toFixed(2)),
       pendingJobs: bookings.filter((b) => b.status === 'pending').length,
       openReports: (reportsRes.data ?? []).filter((r) => r.status !== 'resolved').length,
