@@ -82,7 +82,11 @@ export async function POST(req: Request) {
     if (flags.signups_enabled === 'false') {
       return fail('New registrations are paused right now. Please try again later.', 503)
     }
-    const { email, password, fullName, role = 'customer' } = body
+    const { email, password, fullName } = body
+    // The request body is untrusted JSON: AuthBody's role type is not enforced at
+    // runtime, and the profiles table also accepts 'admin'. Only allow self-service roles.
+    const role = body.role ?? 'customer'
+    if (role !== 'customer' && role !== 'driver') return fail('Choose a customer or operator account', 400)
     if (!email || !password || !fullName) return fail('Name, email and password are required')
     if (password.length < 8) return fail('Password must be at least 8 characters')
     if (role === 'driver' && !body.vehiclePlate) return fail('Vehicle plate is required for operators')

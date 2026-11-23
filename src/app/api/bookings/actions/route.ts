@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       body: `${auth.profile.full_name} (${auth.profile.vehicle_plate ?? 'Aboboyaa'}) is on the way for ${bkRow.reference}. Show pickup code ${bkRow.pickup_code} on arrival.`,
       kind: 'info',
     })
-    const [hydrated] = await hydrateBookings([{ ...bkRow, driver_id: auth.userId, status: 'assigned' } as unknown as Record<string, unknown>])
+    const [hydrated] = await hydrateBookings([{ ...bkRow, driver_id: auth.userId, status: 'assigned' } as unknown as Record<string, unknown>], { forDriver: true })
     return json({ booking: hydrated })
   }
 
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       body: `Your load for ${bkRow.reference} is on its way to an approved site. You will get a disposal confirmation shortly.`,
       kind: 'info',
     })
-    const [hydrated] = await hydrateBookings([{ ...bkRow, status: 'collected' } as unknown as Record<string, unknown>])
+    const [hydrated] = await hydrateBookings([{ ...bkRow, status: 'collected' } as unknown as Record<string, unknown>], { forDriver: true })
     return json({ booking: hydrated })
   }
 
@@ -190,7 +190,7 @@ export async function POST(req: Request) {
       },
     ])
 
-    const [hydrated] = await hydrateBookings([{ ...bkRow, status: 'verified' } as unknown as Record<string, unknown>])
+    const [hydrated] = await hydrateBookings([{ ...bkRow, status: 'verified' } as unknown as Record<string, unknown>], { forDriver: true })
     return json({ booking: hydrated, verification: { ...verif, site } })
   }
 
