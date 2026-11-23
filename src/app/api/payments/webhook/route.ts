@@ -11,9 +11,14 @@ export async function POST(req: Request) {
   if (!paystackSignatureValid(raw, req.headers.get('x-paystack-signature'))) {
     return fail('Invalid signature', 401)
   }
-  const event = (await JSON.parse(raw).catch(() => null)) as
-    | { event?: string; data?: { reference?: string; status?: string } }
-    | null
+  // JSON.parse is synchronous and throws; it has no .catch() (the old code threw
+  // a TypeError on every delivery, so Paystack never got a 2xx).
+  let event: { event?: string; data?: { reference?: string; status?: string } } | null = null
+  try {
+    event = JSON.parse(raw)
+  } catch {
+    event = null
+  }
   if (!event?.event) return fail('Invalid payload', 400)
 
   if (event.event === 'charge.success' && event.data?.reference) {

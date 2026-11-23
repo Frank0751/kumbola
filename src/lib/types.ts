@@ -75,7 +75,7 @@ export interface Booking {
   estimated_kg: number
   municipality: string
   address: string
-  pickup_code: string
+  pickup_code?: string // omitted from every operator-facing response (see hydrateBookings)
   preferred_time: PreferredTime
   notes: string | null
   amount_ghs: number

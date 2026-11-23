@@ -2,7 +2,14 @@
 import { supabaseAdmin } from '@/lib/supabase-server'
 import type { Booking, DisposalVerification, DisposalSite } from '@/lib/types'
 
-export async function hydrateBookings(rows: Record<string, unknown>[]): Promise<Booking[]> {
+export interface HydrateOptions {
+  // Strip pickup_code. Set this for every response an operator receives: the code is
+  // the customer's proof that the operator actually showed up, so the operator must
+  // only ever learn it by asking the customer at the door.
+  forDriver?: boolean
+}
+
+export async function hydrateBookings(rows: Record<string, unknown>[], opts: HydrateOptions = {}): Promise<Booking[]> {
   if (!rows.length) return []
   const admin = supabaseAdmin()
 
@@ -37,11 +44,17 @@ export async function hydrateBookings(rows: Record<string, unknown>[]): Promise<
   )
 
   return rows.map((r) => ({
-    ...(r as unknown as Booking),
+    ...(stripPickupCode(r, opts.forDriver) as unknown as Booking),
     driver: r.driver_id
       ? ((driverMap.get(r.driver_id as string) ?? null) as Booking['driver'])
       : null,
     customer: (customerMap.get(r.customer_id as string) ?? undefined) as Booking['customer'],
     verification: verifMap.get(r.id as string) ?? null,
   }))
+}
+
+function stripPickupCode(row: Record<string, unknown>, strip?: boolean): Record<string, unknown> {
+  if (!strip) return row
+  const { pickup_code, ...rest } = row
+  return rest
 }

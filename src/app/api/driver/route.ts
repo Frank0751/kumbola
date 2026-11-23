@@ -44,9 +44,9 @@ export async function GET(req: Request) {
   ])
 
   const [available, activeAll, history] = await Promise.all([
-    hydrateBookings((availRes.data ?? []) as Record<string, unknown>[]),
-    hydrateBookings((activeRes.data ?? []) as Record<string, unknown>[]),
-    hydrateBookings((histRes.data ?? []) as Record<string, unknown>[]),
+    hydrateBookings((availRes.data ?? []) as Record<string, unknown>[], { forDriver: true }),
+    hydrateBookings((activeRes.data ?? []) as Record<string, unknown>[], { forDriver: true }),
+    hydrateBookings((histRes.data ?? []) as Record<string, unknown>[], { forDriver: true }),
   ])
 
   const payload: DriverDashboardPayload = {

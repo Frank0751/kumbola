@@ -27,9 +27,9 @@ export async function GET(req: Request) {
       .limit(40)
 
     const [available, active, history] = await Promise.all([
-      hydrateBookings((availRes.data ?? []) as Record<string, unknown>[]),
-      hydrateBookings((mineRes.data ?? []) as Record<string, unknown>[]),
-      hydrateBookings((histRes.data ?? []) as Record<string, unknown>[]),
+      hydrateBookings((availRes.data ?? []) as Record<string, unknown>[], { forDriver: true }),
+      hydrateBookings((mineRes.data ?? []) as Record<string, unknown>[], { forDriver: true }),
+      hydrateBookings((histRes.data ?? []) as Record<string, unknown>[], { forDriver: true }),
     ])
     return json({ available, active, history })
   }

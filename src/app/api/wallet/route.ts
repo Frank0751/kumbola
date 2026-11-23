@@ -1,8 +1,8 @@
 // /api/wallet
 // GET  — balance + transaction history
-// POST — { action: 'topup', amount, network } | { action: 'subscribe', planId }
+// POST — { action: 'subscribe', planId }
+// Wallet top-ups go through /api/payments/initialize (Paystack), never here.
 import { verifyUser, json, fail, supabaseAdmin } from '@/lib/supabase-server'
-import { MOMO_NETWORKS } from '@/lib/constants'
 import type { Transaction, Plan } from '@/lib/types'
 
 export async function GET(req: Request) {
@@ -22,40 +22,10 @@ export async function POST(req: Request) {
   const auth = await verifyUser(req)
   if (!auth) return fail('Unauthorized', 401)
   const body = (await req.json().catch(() => null)) as
-    | { action?: 'topup' | 'subscribe'; amount?: number; network?: string; planId?: string }
+    | { action?: 'subscribe'; planId?: string }
     | null
   if (!body?.action) return fail('Missing action')
   const admin = supabaseAdmin()
-
-  if (body.action === 'topup') {
-    const amount = Math.round(Number(body.amount) * 100) / 100
-    if (!amount || amount < 5) return fail('Minimum top-up is GHS 5')
-    if (amount > 2000) return fail('Maximum top-up is GHS 2,000 per transaction')
-    const network = MOMO_NETWORKS.includes(body.network ?? '') ? body.network : 'MTN MoMo'
-
-    const { error } = await admin
-      .from('profiles')
-      .update({ wallet_balance: Number((auth.profile.wallet_balance + amount).toFixed(2)) })
-      .eq('id', auth.userId)
-    if (error) return fail(error.message, 500)
-    const reference = `TOP-${Date.now().toString(36).toUpperCase()}`
-    await admin.from('transactions').insert({
-      user_id: auth.userId,
-      type: 'topup',
-      amount_ghs: amount,
-      method: 'momo',
-      network,
-      reference,
-      note: `${network} top-up (simulated for demo)`,
-    })
-    await admin.from('notifications').insert({
-      user_id: auth.userId,
-      title: 'Wallet topped up',
-      body: `GHS ${amount.toFixed(2)} received via ${network}. Reference ${reference}.`,
-      kind: 'success',
-    })
-    return json({ balance: Number((auth.profile.wallet_balance + amount).toFixed(2)) })
-  }
 
   if (body.action === 'subscribe') {
     if (auth.profile.role !== 'customer') return fail('Only customer accounts can subscribe to plans', 403)
