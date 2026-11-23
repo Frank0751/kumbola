@@ -2,7 +2,7 @@
 // GET  — role-scoped listing (customer: own bookings; driver: available/active/history)
 // POST — create a booking (customer)
 import { verifyUser, json, fail, supabaseAdmin } from '@/lib/supabase-server'
-import { hydrateBookings } from '@/lib/booking-helpers'
+import { hydrateBookings, toJobOffer, canBrowseJobs } from '@/lib/booking-helpers'
 import { getSettings } from '@/lib/app-settings'
 import { ONE_OFF_PRICES, WASTE_SIZES, PLAN_PICKUP_TARIFF, DRIVER_COMMISSION } from '@/lib/constants'
 import type { Booking, WasteSize } from '@/lib/types'
@@ -14,7 +14,10 @@ export async function GET(req: Request) {
 
   if (auth.profile.role === 'driver') {
     const [availRes, mineRes] = await Promise.all([
-      admin.from('bookings').select('*').eq('status', 'pending').order('created_at', { ascending: true }).limit(25),
+      // Unvetted, suspended or offline operators get no open jobs at all.
+      canBrowseJobs(auth.profile)
+        ? admin.from('bookings').select('*').eq('status', 'pending').order('created_at', { ascending: true }).limit(25)
+        : Promise.resolve({ data: [] as Record<string, unknown>[] }),
       admin.from('bookings').select('*').eq('driver_id', auth.userId).in('status', ['assigned', 'collected']).order('created_at', { ascending: false }),
       // history fetched below
     ])
@@ -31,7 +34,7 @@ export async function GET(req: Request) {
       hydrateBookings((mineRes.data ?? []) as Record<string, unknown>[], { forDriver: true }),
       hydrateBookings((histRes.data ?? []) as Record<string, unknown>[], { forDriver: true }),
     ])
-    return json({ available, active, history })
+    return json({ available: available.map(toJobOffer), active, history })
   }
 
   // customer (and admin previewing): own bookings
