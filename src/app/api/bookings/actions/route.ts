@@ -27,6 +27,8 @@ export async function POST(req: Request) {
   // ---------------- DRIVER: accept ----------------
   if (body.action === 'accept') {
     if (auth.profile.role !== 'driver') return fail('Only operators can accept jobs', 403)
+    // Check approval directly rather than trusting is_online to have been cleared.
+    if (auth.profile.vetting_status !== 'approved') return fail('Your operator account is not approved to take jobs', 403)
     if (bkRow.status !== 'pending') return fail('This job was just taken by another operator', 409)
     if (!auth.profile.is_online) return fail('Go online to accept jobs', 409)
     const activeRes = await admin

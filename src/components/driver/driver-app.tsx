@@ -21,7 +21,7 @@ import { Progress } from '@/components/ui/progress'
 import { api } from '@/lib/api-client'
 import { ghs, timeAgo, dateTimeShort, num } from '@/lib/format'
 import { WASTE_SIZES, sizeLabel } from '@/lib/constants'
-import type { DriverDashboardPayload, Booking, DisposalSite, Profile } from '@/lib/types'
+import type { DriverDashboardPayload, Booking, DisposalSite, JobOffer, Profile } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type Step = 'assigned' | 'collected' | 'done'
@@ -291,7 +291,7 @@ function BenefitCard({ icon: Icon, title, body, ok }: { icon: React.ComponentTyp
 
 /* ---------------- Available job card ---------------- */
 
-function AvailableJobCard({ booking: b, onAccepted }: { booking: Booking; onAccepted: () => void }) {
+function AvailableJobCard({ booking: b, onAccepted }: { booking: JobOffer; onAccepted: () => void }) {
   const [busy, setBusy] = useState(false)
   const payout = b.driver_payout_ghs
 
@@ -315,8 +315,7 @@ function AvailableJobCard({ booking: b, onAccepted }: { booking: Booking; onAcce
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-semibold">{sizeLabel(b.waste_size)} · {b.municipality}</p>
-            <p className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" /> {b.address}</p>
-            {b.notes && <p className="mt-0.5 line-clamp-1 text-xs italic text-muted-foreground">“{b.notes}”</p>}
+            <p className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" /> Exact address shown after you accept</p>
           </div>
           <Badge variant="secondary" className="shrink-0">{b.preferred_time === 'now' ? 'ASAP' : b.preferred_time}</Badge>
         </div>

@@ -168,8 +168,13 @@ export interface CustomerDashboardPayload {
   transactions: Transaction[]
 }
 
+// What an operator sees about an open job before accepting it: the area, load and
+// pay, never who the customer is or exactly where they live (Data Protection Act 843).
+// The full booking is only returned once this operator has accepted the job.
+export type JobOffer = Omit<Booking, 'customer_id' | 'customer' | 'address' | 'notes' | 'pickup_code'>
+
 export interface DriverDashboardPayload {
-  available: Booking[]
+  available: JobOffer[]
   active: Booking | null
   history: Booking[]
   transactions: Transaction[]

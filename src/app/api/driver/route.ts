@@ -2,7 +2,7 @@
 // GET  — driver dashboard: available jobs, active job, history, payouts, leaderboard
 // POST — { online: boolean } toggle
 import { verifyUser, json, fail, supabaseAdmin } from '@/lib/supabase-server'
-import { hydrateBookings } from '@/lib/booking-helpers'
+import { hydrateBookings, toJobOffer, canBrowseJobs } from '@/lib/booking-helpers'
 import type { DriverDashboardPayload, Transaction, Booking } from '@/lib/types'
 
 export async function GET(req: Request) {
@@ -10,9 +10,13 @@ export async function GET(req: Request) {
   if (!auth) return fail('Unauthorized', 401)
   if (auth.profile.role !== 'driver') return fail('Driver access only', 403)
   const admin = supabaseAdmin()
+  // Unvetted, suspended or offline operators get no open jobs at all.
+  const browse = canBrowseJobs(auth.profile)
 
   const [availRes, activeRes, histRes, txnRes, boardRes, onlineRes] = await Promise.all([
-    admin.from('bookings').select('*').eq('status', 'pending').order('created_at', { ascending: true }).limit(20),
+    browse
+      ? admin.from('bookings').select('*').eq('status', 'pending').order('created_at', { ascending: true }).limit(20)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     admin
       .from('bookings')
       .select('*')
@@ -50,7 +54,7 @@ export async function GET(req: Request) {
   ])
 
   const payload: DriverDashboardPayload = {
-    available,
+    available: available.map(toJobOffer),
     active: (activeAll[0] as Booking | undefined) ?? null,
     history,
     transactions: (txnRes.data ?? []) as Transaction[],

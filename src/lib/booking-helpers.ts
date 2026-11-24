@@ -1,6 +1,6 @@
 // Server-side helpers to hydrate bookings with joined customer/driver/site/verification
 import { supabaseAdmin } from '@/lib/supabase-server'
-import type { Booking, DisposalVerification, DisposalSite } from '@/lib/types'
+import type { Booking, DisposalVerification, DisposalSite, JobOffer, Profile } from '@/lib/types'
 
 export interface HydrateOptions {
   // Strip pickup_code. Set this for every response an operator receives: the code is
@@ -57,4 +57,15 @@ function stripPickupCode(row: Record<string, unknown>, strip?: boolean): Record<
   if (!strip) return row
   const { pickup_code, ...rest } = row
   return rest
+}
+
+// Reduce a booking to what an operator may see before accepting it (see JobOffer).
+export function toJobOffer(b: Booking): JobOffer {
+  const { customer_id, customer, address, notes, pickup_code, ...offer } = b
+  return offer
+}
+
+// Only vetted operators who are online may browse open jobs.
+export function canBrowseJobs(profile: Pick<Profile, 'role' | 'vetting_status' | 'is_online'>): boolean {
+  return profile.role === 'driver' && profile.vetting_status === 'approved' && profile.is_online
 }
