@@ -1,7 +1,8 @@
 /**
  * KumBola — demo seed for Supabase
  * Run: bun supabase/seed.ts
- * Creates demo accounts (password: kumbola123), plans, disposal sites,
+ * Creates demo accounts (password: kumbola123, except the admin, whose password
+ * comes from SEED_ADMIN_PASSWORD and is never public), plans, disposal sites,
  * bookings across all statuses, verifications, transactions, notifications.
  */
 import { createClient } from '@supabase/supabase-js'
@@ -11,6 +12,13 @@ const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const db = createClient(URL, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } })
 
 const PASSWORD = 'kumbola123'
+// The admin controls wallets, users, prices and data exports, so it must not share
+// the public demo password.
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? ''
+if (ADMIN_PASSWORD.length < 12 || ADMIN_PASSWORD === PASSWORD) {
+  console.error('Set SEED_ADMIN_PASSWORD (at least 12 characters, not the demo password) before seeding.')
+  process.exit(1)
+}
 
 // deterministic PRNG
 function mulberry32(a: number) {
@@ -138,7 +146,7 @@ async function main() {
     customerIds.push(data.user.id)
   }
   const adminRes = await db.auth.admin.createUser({
-    email: ADMIN.email, password: PASSWORD, email_confirm: true,
+    email: ADMIN.email, password: ADMIN_PASSWORD, email_confirm: true,
     user_metadata: { full_name: ADMIN.name, role: 'admin' },
   })
   if (adminRes.error) throw adminRes.error
@@ -341,7 +349,7 @@ async function main() {
   console.log('  customer@kumbola.com  — Ama Serwaa (household, Suame)')
   console.log('  business@kumbola.com  — Jollof Junction (business, Suame)')
   console.log('  driver@kumbola.com    — Kwame Osei (Aboboyaa driver, Suame)')
-  console.log('  admin@kumbola.com     — KMA Sanitation Desk (city admin)')
+  console.log('  admin@kumbola.com     — KMA Sanitation Desk (city admin; password from SEED_ADMIN_PASSWORD)')
 }
 
 main().catch((e) => {

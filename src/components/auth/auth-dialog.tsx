@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Home, Truck, Store, Landmark, ShieldCheck, Sparkles } from 'lucide-react'
+import { Loader2, Home, Truck, Store, ShieldCheck, Sparkles } from 'lucide-react'
 import { publicApi } from '@/lib/api-client'
 import { useSession } from '@/lib/store'
 import { MUNICIPALITY_NAMES, DEMO_ACCOUNTS } from '@/lib/constants'
@@ -21,7 +21,6 @@ const DEMO_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   home: HomeIcon,
   truck: Truck,
   store: Store,
-  landmark: Landmark,
 }
 
 export function AuthDialog({

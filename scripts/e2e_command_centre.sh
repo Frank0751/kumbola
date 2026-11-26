@@ -2,9 +2,11 @@
 # E2E verification of the Command Centre API on the live Cloudflare deployment.
 set -u
 BASE="https://kumbola.frankkoomson1.workers.dev"
+: "${KUMBOLA_ADMIN_PASSWORD:?set KUMBOLA_ADMIN_PASSWORD to the admin account password}"
+ADMIN_LOGIN=$(python3 -c 'import json,os;print(json.dumps({"action":"signin","email":"admin@kumbola.com","password":os.environ["KUMBOLA_ADMIN_PASSWORD"]}))')
 
 AT=$(curl -sS --max-time 30 -X POST "$BASE/api/auth" -H 'Content-Type: application/json' \
-  -d '{"action":"signin","email":"admin@kumbola.com","password":"kumbola123"}' \
+  -d "$ADMIN_LOGIN" \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['session']['access_token'])")
 [ -z "$AT" ] && { echo "signin FAILED"; exit 1; }
 echo "admin signin OK"
