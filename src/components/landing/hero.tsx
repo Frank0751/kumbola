@@ -26,15 +26,27 @@ export function Hero() {
       className="relative flex min-h-[calc(100svh-4rem)] items-center justify-center overflow-hidden bg-forest text-forest-foreground"
     >
       {/* Background image + scrim */}
-      <img
-        src="/images/hero-tricycle.jpg"
-        alt=""
-        aria-hidden
-        className="absolute inset-0 h-full w-full object-cover opacity-45"
-        onError={(e) => {
-          e.currentTarget.style.display = 'none'
-        }}
-      />
+      {/* Pre-sized copies (35 KB on phones) instead of the 3.2 MB original: this is the
+          first thing every visitor downloads, often on prepaid mobile data. Plain
+          srcset rather than next/image, which needs an Images binding on Cloudflare. */}
+      <picture>
+        <source
+          type="image/webp"
+          srcSet="/images/hero-tricycle-640.webp 640w, /images/hero-tricycle-1024.webp 1024w, /images/hero-tricycle-1600.webp 1600w"
+          sizes="100vw"
+        />
+        <img
+          src="/images/hero-tricycle-1600.jpg"
+          alt=""
+          aria-hidden
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover opacity-45"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+      </picture>
       <div
         aria-hidden
         className="absolute inset-0 bg-gradient-to-b from-forest/80 via-forest/65 to-forest/90"
