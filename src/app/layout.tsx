@@ -1,19 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { Ubuntu } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { StoreHydrator } from "@/components/shared/store-hydrator";
 
-const fraunces = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-  axes: ["opsz", "SOFT", "WONK"],
-});
-
-const manrope = Manrope({
-  variable: "--font-sans-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+// One family for the whole site. Ubuntu isn't a variable font, so each weight is
+// listed; latin-ext covers Twi letters such as ɛ and ɔ in names and addresses.
+const ubuntu = Ubuntu({
+  variable: "--font-ubuntu",
+  subsets: ["latin", "latin-ext"],
+  weight: ["300", "400", "500", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -48,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body
-        className={`${fraunces.variable} ${manrope.variable} font-sans antialiased bg-background text-foreground`}
+        className={`${ubuntu.variable} font-sans antialiased bg-background text-foreground`}
       >
         {children}
         <StoreHydrator />
