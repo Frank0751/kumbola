@@ -12,6 +12,23 @@ The public site makes a strong first impression: one clear promise, a warm local
 2. Make the sign-up form forgiving: errors shown next to each field, linked labels, autofill hints, phone required with a clear format.
 3. Cut the hero photo from 3.2 MB to about 100 KB so the first screen loads quickly on prepaid mobile data.
 
+## Fix status (28 November 2026)
+
+| Finding | Status | Checked how |
+| --- | --- | --- |
+| B1 placeholder support number | Waiting on Frank: real number, or hide it | |
+| M1 hero photo | Fixed | Phones on 2x screens load a 71 KB WebP, wide desktops 132 KB (was 3.2 MB) |
+| M2 inline errors | Fixed | Empty submit: five field messages, `aria-invalid` linked, focus on first problem, input kept |
+| M3 select labels | Fixed | Account type and Municipality comboboxes are named by their labels |
+| M4 autocomplete | Fixed | name, tel, email, new-password and street-address set; phone keyboard |
+| M5 phone required | Fixed | Same rule in the form and on the server; 11 format cases tested |
+| M6 USSD contradiction | Waiting on Frank: is `*920*88#` live? | |
+| M7 expectations | Fixed | Customer intro line and "All fields are required"; one column on phones |
+| M8 desktop nav | Fixed | Three header links from 1024 px, current page highlighted, no overflow |
+| m1 tagline | Fixed | Removed from the header logo (it rendered at about 6 px), kept on the splash |
+| m2 terms link | Fixed | Links to `/legal` in a new tab, so the form isn't lost |
+| m3 demo grid | Fixed on the PR #3 branch, where the admin demo is removed | |
+
 ## 2. Users and core flows audited
 
 | User | What they come to do |
