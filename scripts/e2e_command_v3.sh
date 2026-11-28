@@ -3,6 +3,8 @@
 # Usage: BASE_URL=... bash scripts/e2e_command_v3.sh
 set -u
 BASE="${BASE_URL:-https://kumbola.frankkoomson1.workers.dev}"
+: "${KUMBOLA_ADMIN_PASSWORD:?set KUMBOLA_ADMIN_PASSWORD to the admin account password}"
+ADMIN_LOGIN=$(python3 -c 'import json,os;print(json.dumps({"action":"signin","email":"admin@kumbola.com","password":os.environ["KUMBOLA_ADMIN_PASSWORD"]}))')
 PASS=0; FAIL=0
 ok()   { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad()  { FAIL=$((FAIL+1)); echo "FAIL: $1"; }
@@ -12,7 +14,7 @@ check() { # check <desc> <expected> <actual>
 
 echo "== sign in =="
 ADMIN_TOKEN=$(curl -s -X POST "$BASE/api/auth" -H 'Content-Type: application/json' \
-  -d '{"action":"signin","email":"admin@kumbola.com","password":"kumbola123"}' \
+  -d "$ADMIN_LOGIN" \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["session"]["access_token"])')
 CUST_TOKEN=$(curl -s -X POST "$BASE/api/auth" -H 'Content-Type: application/json' \
   -d '{"action":"signin","email":"customer@kumbola.com","password":"kumbola123"}' \

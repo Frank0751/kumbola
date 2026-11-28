@@ -154,7 +154,8 @@ export const DEMO_ACCOUNTS = [
   { email: 'customer@kumbola.com', label: 'Household customer', name: 'Ama Serwaa', icon: 'home' },
   { email: 'driver@kumbola.com', label: 'Aboboyaa driver', name: 'Kwame Osei', icon: 'truck' },
   { email: 'business@kumbola.com', label: 'Business customer', name: 'Jollof Junction', icon: 'store' },
-  { email: 'admin@kumbola.com', label: 'City admin', name: 'City Sanitation Desk', icon: 'landmark' },
+  // No admin here on purpose: the demo password is public, and an admin account
+  // controls wallets, users, prices and customer-data exports.
 ]
 
 export const MOMO_NETWORKS = ['MTN MoMo', 'Telecel Cash', 'AirtelTigo Money']

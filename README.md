@@ -26,7 +26,8 @@ native mobile apps. Backend is **Supabase** (PostgreSQL + Auth), hosting target 
 | `customer@kumbola.com` | Household customer (Ama Serwaa, Suame) |
 | `business@kumbola.com` | Business customer (Jollof Junction Chop Bar) |
 | `driver@kumbola.com` | Aboboyaa operator (Kwame Osei — has an active job to walk through) |
-| `admin@kumbola.com` | City admin (City Sanitation Desk) |
+
+The city admin account (`admin@kumbola.com`) is deliberately not a public demo: its password is set from `SEED_ADMIN_PASSWORD` when seeding and shared privately. Scripts that sign in as admin read it from `KUMBOLA_ADMIN_PASSWORD`.
 
 ## Local development
 

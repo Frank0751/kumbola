@@ -106,7 +106,9 @@ const txns = ((dash2.data.transactions as Json[]) ?? []).slice(0, 4)
 console.log(`driver latest txns: ${JSON.stringify(txns.map((t) => `${t.type}:${t.amount_ghs}`))}`)
 
 // --- 9. admin sees KPIs ---
-const adm = await auth('admin@kumbola.com', 'kumbola123')
+const adminPassword = process.env.KUMBOLA_ADMIN_PASSWORD
+if (!adminPassword) throw new Error('Set KUMBOLA_ADMIN_PASSWORD to the admin account password')
+const adm = await auth('admin@kumbola.com', adminPassword)
 const admData = await api(adm.token, '/api/admin')
 const kpis = (admData.data.kpis as Json) ?? {}
 check('admin KPIs present', Object.keys(kpis).length >= 4, Object.keys(kpis))
