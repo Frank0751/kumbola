@@ -13,8 +13,21 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, Home, Truck, Store, ShieldCheck, Sparkles } from 'lucide-react'
 import { publicApi } from '@/lib/api-client'
 import { useSession } from '@/lib/store'
-import { MUNICIPALITY_NAMES, DEMO_ACCOUNTS } from '@/lib/constants'
+import { MUNICIPALITY_NAMES, DEMO_ACCOUNTS, USSD_CODE } from '@/lib/constants'
 import type { SessionPayload } from '@/lib/types'
+import { normalizePhone, PHONE_HINT } from '@/lib/phone'
+
+type FieldId = 'email' | 'password' | 'fullName' | 'phone' | 'su-email' | 'su-pass' | 'address' | 'plate'
+
+// The message under a field. role="alert" so it is read out when it appears.
+function FieldError({ id, message }: { id: FieldId; message?: string }) {
+  if (!message) return null
+  return (
+    <p id={`${id}-error`} role="alert" className="text-xs font-medium text-destructive">
+      {message}
+    </p>
+  )
+}
 import { Home as HomeIcon } from 'lucide-react'
 
 const DEMO_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -63,9 +76,26 @@ export function AuthDialog({
 
   const setMode = (m: string) => setTab(m as 'signin' | 'signup')
 
+  // Field-level errors, shown under each field (not only as a passing toast).
+  const [errors, setErrors] = useState<Partial<Record<FieldId, string>>>({})
+  const clearError = (id: FieldId) => setErrors((prev) => (prev[id] ? { ...prev, [id]: undefined } : prev))
+  // Show the errors and put the cursor in the first field that needs fixing.
+  function showErrors(found: Partial<Record<FieldId, string>>, order: FieldId[]) {
+    setErrors(found)
+    const first = order.find((id) => found[id])
+    if (first) requestAnimationFrame(() => document.getElementById(first)?.focus())
+  }
+  // Props that tie an input to its error message for screen readers.
+  const fieldA11y = (id: FieldId) =>
+    errors[id] ? { 'aria-invalid': true as const, 'aria-describedby': `${id}-error` } : {}
+
   async function submitSignIn(e?: React.FormEvent) {
     e?.preventDefault()
-    if (!email || !password) return toast.error('Enter your email and password')
+    const found: Partial<Record<FieldId, string>> = {}
+    if (!email.trim()) found.email = 'Enter your email'
+    if (!password) found.password = 'Enter your password'
+    if (Object.keys(found).length) return showErrors(found, ['email', 'password'])
+    setErrors({})
     setBusy(true)
     try {
       const res = await publicApi<{ session: SessionPayload }>('/api/auth', {
@@ -84,18 +114,28 @@ export function AuthDialog({
 
   async function submitSignUp(e?: React.FormEvent) {
     e?.preventDefault()
-    if (!email || !password || !fullName) return toast.error('Fill in your name, email and password')
-    if (password.length < 8) return toast.error('Password must be at least 8 characters')
-    if (role === 'customer' && !address.trim()) return toast.error('Enter your pickup address')
+    const found: Partial<Record<FieldId, string>> = {}
+    if (!fullName.trim()) found.fullName = 'Enter your full name'
+    if (!phone.trim()) found.phone = 'Enter a phone number we can reach you on'
+    else if (!normalizePhone(phone)) found.phone = PHONE_HINT
+    if (!email.trim()) found['su-email'] = 'Enter your email'
+    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) found['su-email'] = 'Check your email address, for example ama@gmail.com'
+    if (password.length < 8) found['su-pass'] = 'Use at least 8 characters'
+    if (role === 'customer' && !address.trim()) found.address = 'Enter where the operator should collect from'
+    if (role === 'driver' && !plate.trim()) found.plate = 'Enter your tricycle plate number'
+    if (Object.keys(found).length) {
+      return showErrors(found, ['fullName', 'phone', 'su-email', 'su-pass', 'address', 'plate'])
+    }
+    setErrors({})
     setBusy(true)
     try {
       const res = await publicApi<{ session: SessionPayload }>('/api/auth', {
         method: 'POST',
         body: JSON.stringify({
           action: 'signup',
-          email,
+          email: email.trim(),
           password,
-          fullName,
+          fullName: fullName.trim(),
           phone,
           role,
           accountType: role === 'customer' ? accountType : undefined,
@@ -108,6 +148,7 @@ export function AuthDialog({
       onOpenChange(false)
       toast.success('Akwaaba! Your KumBola account is ready.')
     } catch (err) {
+      // Server errors keep everything the person typed; nothing is cleared.
       toast.error(err instanceof Error ? err.message : 'Sign up failed')
     } finally {
       setBusy(false)
@@ -156,11 +197,13 @@ export function AuthDialog({
             <form onSubmit={submitSignIn} className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                <Input id="email" type="email" inputMode="email" placeholder="you@example.com" value={email} onChange={(e) => { setEmail(e.target.value); clearError('email') }} autoComplete="email" {...fieldA11y('email')} />
+                <FieldError id="email" message={errors.email} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => { setPassword(e.target.value); clearError('password') }} autoComplete="current-password" {...fieldA11y('password')} />
+                <FieldError id="password" message={errors.password} />
               </div>
               <Button type="submit" className="w-full h-11" disabled={busy}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
@@ -215,35 +258,46 @@ export function AuthDialog({
               </button>
             </div>
 
-            <form onSubmit={submitSignUp} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={submitSignUp} noValidate className="space-y-3">
+              {role === 'customer' && (
+                <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                  <Sparkles className="mr-1.5 inline h-4 w-4 align-[-3px] text-gold" aria-hidden />
+                  Create your free account to book. It takes about a minute, and you start with{' '}
+                  <strong className="font-semibold text-foreground">GHS 20 credit</strong>. All fields are required.
+                </p>
+              )}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="fullName">Full name</Label>
-                  <Input id="fullName" placeholder="Ama Serwaa" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                  <Input id="fullName" placeholder="Ama Serwaa" value={fullName} onChange={(e) => { setFullName(e.target.value); clearError('fullName') }} autoComplete="name" autoCapitalize="words" {...fieldA11y('fullName')} />
+                  <FieldError id="fullName" message={errors.fullName} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" type="tel" placeholder="+233 54 000 0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                  <Input id="phone" type="tel" inputMode="tel" placeholder="024 123 4567" value={phone} onChange={(e) => { setPhone(e.target.value); clearError('phone') }} autoComplete="tel" {...fieldA11y('phone')} />
+                  <FieldError id="phone" message={errors.phone} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="su-email">Email</Label>
-                  <Input id="su-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <Input id="su-email" type="email" inputMode="email" placeholder="you@example.com" value={email} onChange={(e) => { setEmail(e.target.value); clearError('su-email') }} autoComplete="email" {...fieldA11y('su-email')} />
+                  <FieldError id="su-email" message={errors['su-email']} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="su-pass">Password</Label>
-                  <Input id="su-pass" type="password" placeholder="8+ characters" value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <Input id="su-pass" type="password" placeholder="8+ characters" value={password} onChange={(e) => { setPassword(e.target.value); clearError('su-pass') }} autoComplete="new-password" {...fieldA11y('su-pass')} />
+                  <FieldError id="su-pass" message={errors['su-pass']} />
                 </div>
               </div>
 
               {role === 'customer' ? (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label>Account type</Label>
+                      <Label htmlFor="account-type">Account type</Label>
                       <Select value={accountType} onValueChange={(v) => setAccountType(v as typeof accountType)}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectTrigger id="account-type" className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="household">Household</SelectItem>
                           <SelectItem value="business">Business</SelectItem>
@@ -252,9 +306,9 @@ export function AuthDialog({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Municipality</Label>
+                      <Label htmlFor="municipality">Municipality</Label>
                       <Select value={municipality} onValueChange={setMunicipality}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectTrigger id="municipality" className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {MUNICIPALITY_NAMES.map((m) => (
                             <SelectItem key={m} value={m}>{m}</SelectItem>
@@ -265,34 +319,33 @@ export function AuthDialog({
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="address">Pickup address</Label>
-                    <Input id="address" placeholder="House 12, Asuoyeboah Main Road" value={address} onChange={(e) => setAddress(e.target.value)} />
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-                    <Sparkles className="h-4 w-4 shrink-0 text-gold" />
-                    You start with GHS 20 free wallet credit. Plans are optional; pay-as-you-go works from day one.
+                    <Input id="address" placeholder="House 12, Asuoyeboah Main Road" value={address} onChange={(e) => { setAddress(e.target.value); clearError('address') }} autoComplete="street-address" {...fieldA11y('address')} />
+                    <FieldError id="address" message={errors.address} />
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="plate">Vehicle plate</Label>
                       <Input
                         id="plate"
                         placeholder="AS-0000-26"
                         value={plate}
-                        onChange={(e) => setPlate(e.target.value)}
+                        onChange={(e) => { setPlate(e.target.value); clearError('plate') }}
                         autoComplete="off"
                         autoCorrect="off"
                         autoCapitalize="characters"
                         spellCheck={false}
                         enterKeyHint="next"
+                        {...fieldA11y('plate')}
                       />
+                      <FieldError id="plate" message={errors.plate} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Base municipality</Label>
+                      <Label htmlFor="base-municipality">Base municipality</Label>
                       <Select value={municipality} onValueChange={setMunicipality}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectTrigger id="base-municipality" className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {MUNICIPALITY_NAMES.map((m) => (
                             <SelectItem key={m} value={m}>{m}</SelectItem>
@@ -311,12 +364,16 @@ export function AuthDialog({
               <Button type="submit" className="w-full h-11" disabled={busy}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : role === 'driver' ? 'Join as operator' : 'Create my account'}
               </Button>
-              <p className="text-center text-[11px] text-muted-foreground">
-                By continuing you agree to KumBola&apos;s terms and the Data Protection Act, 2012 (Act 843) privacy notice.
+              <p className="text-center text-xs text-muted-foreground">
+                By continuing you agree to KumBola&apos;s{' '}
+                <a href="/legal" target="_blank" rel="noopener" className="font-medium text-foreground underline underline-offset-2">
+                  terms and privacy notice<span className="sr-only"> (opens in a new tab)</span>
+                </a>{' '}
+                under the Data Protection Act, 2012 (Act 843).
               </p>
             </form>
             <div className="flex justify-center">
-              <Badge variant="secondary" className="text-[10px]">USSD {`*920*88#`} · WhatsApp booking coming soon</Badge>
+              <Badge variant="secondary" className="text-[11px]">USSD {USSD_CODE} and WhatsApp booking coming soon</Badge>
             </div>
           </TabsContent>
         </Tabs>

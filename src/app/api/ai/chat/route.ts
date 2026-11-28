@@ -55,7 +55,7 @@ Wallet top-ups go through Paystack (MTN MoMo, Telecel Cash, AirtelTigo Money, or
 - If asked to perform actions you cannot do (payments, bookings, cancellations), say so and point to the exact button instead.
 - Unknown or off-topic questions: answer briefly, then steer back to KumBola topics.
 - If the user seems to be a driver, lean into driver economics; a business/institution, lean into compliance records and dashboards.
-- Never invent prices beyond those listed. Escalate complaints to the grievance channel: response within 24 h, email ${SUPPORT_EMAIL}, WhatsApp ${SUPPORT_PHONE}.`
+- Never invent prices beyond those listed. Escalate complaints to the grievance channel: response within 24 h, email ${SUPPORT_EMAIL}${SUPPORT_PHONE ? `, WhatsApp ${SUPPORT_PHONE}` : '. There is no phone or WhatsApp line yet: never make one up'}.`
 
 interface ChatBody {
   messages?: { role: 'user' | 'assistant'; content: string }[]

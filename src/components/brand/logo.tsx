@@ -4,7 +4,8 @@
  * KumBola brand logo — recycling loop + tricycle silhouette in an olive leaf.
  * Pure SVG so it inherits currentColor and scales crisply everywhere.
  */
-export function Logo({ className }: { className?: string }) {
+// `tagline` is off in the header: at header size it renders around 6px, too small to read.
+export function Logo({ className, tagline = true }: { className?: string; tagline?: boolean }) {
   return (
     <svg
       viewBox="0 0 220 56"
@@ -43,20 +44,22 @@ export function Logo({ className }: { className?: string }) {
       {/* wordmark */}
       <text
         x="66"
-        y="34"
+        y={tagline ? 34 : 37}
         className="fill-foreground font-display"
         style={{ fontSize: 26, fontWeight: 700, letterSpacing: '0.5px' }}
       >
         Kum<tspan className="fill-primary">Bola</tspan>
       </text>
-      <text
-        x="67"
-        y="48"
-        className="fill-muted-foreground"
-        style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '2.6px' }}
-      >
-        KILL TRASH · KUMASI
-      </text>
+      {tagline && (
+        <text
+          x="67"
+          y="48"
+          className="fill-muted-foreground"
+          style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '2.6px' }}
+        >
+          KILL TRASH · KUMASI
+        </text>
+      )}
     </svg>
   )
 }

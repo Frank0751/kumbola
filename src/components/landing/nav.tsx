@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Bike,
   Building2,
@@ -22,7 +22,7 @@ import { Logo, LogoMark } from '@/components/brand/logo'
 import { Button } from '@/components/ui/button'
 import { useMarketingCta } from '@/components/marketing/marketing-shell'
 import { useSession } from '@/lib/store'
-import { SUPPORT_EMAIL, SUPPORT_PHONE, USSD_CODE } from '@/lib/constants'
+import { SUPPORT_EMAIL, SUPPORT_PHONE, USSD_CODE, USSD_LIVE } from '@/lib/constants'
 import {
   Sheet,
   SheetContent,
@@ -76,6 +76,7 @@ export function SiteNav() {
   const { onSignIn, onGetStarted } = useMarketingCta()
   const session = useSession((s) => s.session)
   const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
   const close = () => setOpen(false)
@@ -95,8 +96,24 @@ export function SiteNav() {
           aria-label="KumBola home"
           className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Logo className="h-9 w-auto sm:h-10" />
+          <Logo tagline={false} className="h-9 w-auto sm:h-10" />
         </Link>
+
+        {/* The pages people compare before booking, visible on wide screens.
+            Everything stays in the menu too. */}
+        <ul className="hidden flex-1 items-center justify-center gap-1 lg:flex">
+          {INFO_LINKS.slice(0, 3).map((l) => (
+            <li key={l.href}>
+              <Link
+                href={l.href}
+                aria-current={pathname === l.href ? 'page' : undefined}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-accent aria-[current=page]:text-foreground"
+              >
+                {l.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
 
         <div className="flex items-center gap-2">
           <Button
@@ -115,7 +132,7 @@ export function SiteNav() {
             Book a pickup
           </Button>
 
-          {/* Menu — the only navigation entry on every screen size */}
+          {/* Menu: every page, on every screen size */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -222,13 +239,15 @@ export function SiteNav() {
 
               {/* Contact footer inside the menu */}
               <div className="border-t p-4 text-xs leading-relaxed text-muted-foreground">
-                <a
-                  href={`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`}
-                  className="flex items-center gap-2 py-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Phone className="size-3.5 shrink-0" aria-hidden />
-                  {SUPPORT_PHONE} (WhatsApp)
-                </a>
+                {SUPPORT_PHONE && (
+                  <a
+                    href={`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`}
+                    className="flex items-center gap-2 py-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Phone className="size-3.5 shrink-0" aria-hidden />
+                    {SUPPORT_PHONE} (WhatsApp)
+                  </a>
+                )}
                 <a
                   href={`mailto:${SUPPORT_EMAIL}`}
                   className="flex items-center gap-2 py-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -236,7 +255,10 @@ export function SiteNav() {
                   <Mail className="size-3.5 shrink-0" aria-hidden />
                   {SUPPORT_EMAIL}
                 </a>
-                <p className="py-1 tabular-nums">USSD {USSD_CODE}</p>
+                <p className="py-1 tabular-nums">
+                  USSD {USSD_CODE}
+                  {USSD_LIVE ? '' : ' (coming soon)'}
+                </p>
               </div>
             </SheetContent>
           </Sheet>

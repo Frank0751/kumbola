@@ -1,5 +1,5 @@
 import { LogoMark } from '@/components/brand/logo'
-import { SUPPORT_EMAIL, SUPPORT_PHONE, USSD_CODE } from '@/lib/constants'
+import { SUPPORT_EMAIL, SUPPORT_PHONE, USSD_CODE, USSD_LIVE } from '@/lib/constants'
 
 const SECTIONS = [
   {
@@ -35,7 +35,10 @@ const SECTIONS = [
     intro:
       'Something went wrong? We take every complaint seriously. Here is exactly what happens.',
     points: [
-      'Reach us: email hello@kumbola.com, WhatsApp +233 55 000 0000, or dial ' + USSD_CODE + ' and choose “Report a problem”.',
+      'Reach us: email ' + SUPPORT_EMAIL +
+        (SUPPORT_PHONE ? ', WhatsApp ' + SUPPORT_PHONE : '') +
+        (USSD_LIVE ? ', or dial ' + USSD_CODE + ' and choose “Report a problem”' : '') +
+        '.',
       'Acknowledgement: every grievance gets a ticket number within 24 hours.',
       'Resolution: our team investigates and responds within 5 working days. Payment disputes are prioritised and resolved within 48 hours.',
       'Escalation: unresolved issues are escalated to the KumBola operations lead, then to the independent KNUST evaluation team as a final check.',
@@ -93,8 +96,8 @@ export function LegalContent() {
         </div>
 
         <p className="mt-10 text-center text-sm text-muted-foreground">
-          Questions about this page? Email {SUPPORT_EMAIL} or WhatsApp{' '}
-          {SUPPORT_PHONE}.
+          Questions about this page? Email {SUPPORT_EMAIL}
+          {SUPPORT_PHONE ? ` or WhatsApp ${SUPPORT_PHONE}` : ''}.
         </p>
       </div>
     </div>

@@ -5,6 +5,7 @@
 import { supabaseAdmin, json, fail } from '@/lib/supabase-server'
 import { getSettings } from '@/lib/app-settings'
 import type { Profile } from '@/lib/types'
+import { normalizePhone, PHONE_HINT } from '@/lib/phone'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const ANON_KEY =
@@ -89,6 +90,10 @@ export async function POST(req: Request) {
     if (role !== 'customer' && role !== 'driver') return fail('Choose a customer or operator account', 400)
     if (!email || !password || !fullName) return fail('Name, email and password are required')
     if (password.length < 8) return fail('Password must be at least 8 characters')
+    // Operators call customers on arrival and the ops desk calls operators, so a
+    // reachable number is required for both roles.
+    const phone = normalizePhone(body.phone ?? '')
+    if (!phone) return fail(`Enter a valid phone number. ${PHONE_HINT}`)
     if (role === 'driver' && !body.vehiclePlate) return fail('Vehicle plate is required for operators')
     if (role === 'customer' && !body.address) return fail('Pickup address is required')
 
@@ -96,7 +101,7 @@ export async function POST(req: Request) {
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName, role, phone: body.phone ?? null },
+      user_metadata: { full_name: fullName, role, phone },
     })
     if (createErr || !created?.user) {
       const msg = createErr?.message ?? 'Could not create account'
@@ -109,7 +114,7 @@ export async function POST(req: Request) {
       id: userId,
       role,
       full_name: fullName,
-      phone: body.phone ?? null,
+      phone,
       email,
       account_type: role === 'customer' ? (body.accountType ?? 'household') : null,
       municipality: body.municipality ?? null,

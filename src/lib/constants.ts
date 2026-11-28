@@ -6,8 +6,12 @@
 export const APP_NAME = 'KumBola'
 export const APP_TAGLINE = 'KumBola'
 export const SUPPORT_EMAIL = 'hello@kumbola.com'
-export const SUPPORT_PHONE = '+233 55 000 0000'
+// The WhatsApp/phone support line. null hides it everywhere (menu, legal page,
+// Kumi) until a real, staffed line exists. Set the number here to show it again.
+export const SUPPORT_PHONE: string | null = null
 export const USSD_CODE = '*920*88#'
+// Flip to true once *920*88# actually works; until then every mention says "coming soon".
+export const USSD_LIVE = false
 export const DRIVER_COMMISSION = 0.15 // platform keeps 15%, driver keeps 85%
 export const RECYCLABLES_BONUS_PER_KG = 0.5
 export const PLAN_PICKUP_TARIFF = 9.97 // blended per-pickup tariff (GHS)

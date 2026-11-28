@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSession } from '@/lib/store'
 import { cn } from '@/lib/utils'
+import { SUPPORT_EMAIL, SUPPORT_PHONE } from '@/lib/constants'
 
 type ApiRole = 'user' | 'assistant'
 type ChatRole = ApiRole | 'system'
@@ -491,7 +492,8 @@ export function KumiChat({ authed }: { authed: boolean }) {
             </form>
 
             <p className="-mt-1.5 px-3 pb-2.5 text-center text-[11px] leading-snug text-muted-foreground">
-              Kumi is an AI guide. For urgent issues call +233 55 000 0000
+              Kumi is an AI guide. For urgent issues{' '}
+              {SUPPORT_PHONE ? `call ${SUPPORT_PHONE}` : `email ${SUPPORT_EMAIL}`}
             </p>
           </div>
         </div>
