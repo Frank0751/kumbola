@@ -181,7 +181,7 @@ export function AuthDialog({
                     key={d.email}
                     onClick={() => demoLogin(d.email)}
                     disabled={demoBusy !== null}
-                    className="flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors hover:bg-muted disabled:opacity-60 min-h-[44px]"
+                    className="flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors hover:bg-muted disabled:opacity-60 min-h-[44px] last:odd:col-span-2"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       {demoBusy === d.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
