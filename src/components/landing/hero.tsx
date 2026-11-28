@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useMarketingCta } from '@/components/marketing/marketing-shell'
-import { USSD_CODE } from '@/lib/constants'
+import { USSD_CODE, USSD_LIVE } from '@/lib/constants'
 
 /**
  * Full-screen Uber/Bolt-style hero: almost no words, two actions.
@@ -102,6 +102,7 @@ export function Hero() {
           <span className="font-semibold tabular-nums text-cream/75">
             {USSD_CODE}
           </span>
+          {USSD_LIVE ? '' : ' coming soon'}
         </p>
       </motion.div>
     </section>

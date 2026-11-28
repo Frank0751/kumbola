@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { LogoMark } from '@/components/brand/logo'
-import { FAQS, USSD_CODE } from '@/lib/constants'
+import { FAQS, USSD_CODE, USSD_LIVE } from '@/lib/constants'
 import { useMarketingCta } from '@/components/marketing/marketing-shell'
 import { Reveal } from './motion'
 
@@ -109,8 +109,8 @@ export function FinalCta() {
             Web app live now · USSD{' '}
             <span className="font-semibold tabular-nums text-cream/85">
               {USSD_CODE}
-            </span>{' '}
-            · WhatsApp &amp; agent booking coming soon
+            </span>
+            {USSD_LIVE ? ' · WhatsApp & agent booking coming soon' : ', WhatsApp & agent booking coming soon'}
           </p>
         </Reveal>
       </div>

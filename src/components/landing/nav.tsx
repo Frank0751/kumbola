@@ -22,7 +22,7 @@ import { Logo, LogoMark } from '@/components/brand/logo'
 import { Button } from '@/components/ui/button'
 import { useMarketingCta } from '@/components/marketing/marketing-shell'
 import { useSession } from '@/lib/store'
-import { SUPPORT_EMAIL, SUPPORT_PHONE, USSD_CODE } from '@/lib/constants'
+import { SUPPORT_EMAIL, SUPPORT_PHONE, USSD_CODE, USSD_LIVE } from '@/lib/constants'
 import {
   Sheet,
   SheetContent,
@@ -239,13 +239,15 @@ export function SiteNav() {
 
               {/* Contact footer inside the menu */}
               <div className="border-t p-4 text-xs leading-relaxed text-muted-foreground">
-                <a
-                  href={`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`}
-                  className="flex items-center gap-2 py-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Phone className="size-3.5 shrink-0" aria-hidden />
-                  {SUPPORT_PHONE} (WhatsApp)
-                </a>
+                {SUPPORT_PHONE && (
+                  <a
+                    href={`tel:${SUPPORT_PHONE.replace(/\s/g, '')}`}
+                    className="flex items-center gap-2 py-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Phone className="size-3.5 shrink-0" aria-hidden />
+                    {SUPPORT_PHONE} (WhatsApp)
+                  </a>
+                )}
                 <a
                   href={`mailto:${SUPPORT_EMAIL}`}
                   className="flex items-center gap-2 py-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -253,7 +255,10 @@ export function SiteNav() {
                   <Mail className="size-3.5 shrink-0" aria-hidden />
                   {SUPPORT_EMAIL}
                 </a>
-                <p className="py-1 tabular-nums">USSD {USSD_CODE}</p>
+                <p className="py-1 tabular-nums">
+                  USSD {USSD_CODE}
+                  {USSD_LIVE ? '' : ' (coming soon)'}
+                </p>
               </div>
             </SheetContent>
           </Sheet>

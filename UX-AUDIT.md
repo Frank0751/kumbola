@@ -16,13 +16,13 @@ The public site makes a strong first impression: one clear promise, a warm local
 
 | Finding | Status | Checked how |
 | --- | --- | --- |
-| B1 placeholder support number | Waiting on Frank: real number, or hide it | |
+| B1 placeholder support number | Fixed (hidden, per Frank) | `SUPPORT_PHONE` is `null`: no number in the menu, legal page or Kumi's footer, and Kumi is told no phone line exists. Set the real number in `src/lib/constants.ts` to show it again |
 | M1 hero photo | Fixed | Phones on 2x screens load a 71 KB WebP, wide desktops 132 KB (was 3.2 MB) |
 | M2 inline errors | Fixed | Empty submit: five field messages, `aria-invalid` linked, focus on first problem, input kept |
 | M3 select labels | Fixed | Account type and Municipality comboboxes are named by their labels |
 | M4 autocomplete | Fixed | name, tel, email, new-password and street-address set; phone keyboard |
 | M5 phone required | Fixed | Same rule in the form and on the server; 11 format cases tested |
-| M6 USSD contradiction | Waiting on Frank: is `*920*88#` live? | |
+| M6 USSD contradiction | Fixed (USSD not live yet, per Frank) | Hero, menu, FAQ and sign-up dialog all say "coming soon"; the legal page no longer says to dial it. Flip `USSD_LIVE` in `src/lib/constants.ts` when it works |
 | M7 expectations | Fixed | Customer intro line and "All fields are required"; one column on phones |
 | M8 desktop nav | Fixed | Three header links from 1024 px, current page highlighted, no overflow |
 | m1 tagline | Fixed | Removed from the header logo (it rendered at about 6 px), kept on the splash |

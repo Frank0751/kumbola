@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, Home, Truck, Store, Landmark, ShieldCheck, Sparkles } from 'lucide-react'
 import { publicApi } from '@/lib/api-client'
 import { useSession } from '@/lib/store'
-import { MUNICIPALITY_NAMES, DEMO_ACCOUNTS } from '@/lib/constants'
+import { MUNICIPALITY_NAMES, DEMO_ACCOUNTS, USSD_CODE } from '@/lib/constants'
 import type { SessionPayload } from '@/lib/types'
 import { normalizePhone, PHONE_HINT } from '@/lib/phone'
 
@@ -374,7 +374,7 @@ export function AuthDialog({
               </p>
             </form>
             <div className="flex justify-center">
-              <Badge variant="secondary" className="text-[10px]">USSD {`*920*88#`} · WhatsApp booking coming soon</Badge>
+              <Badge variant="secondary" className="text-[11px]">USSD {USSD_CODE} and WhatsApp booking coming soon</Badge>
             </div>
           </TabsContent>
         </Tabs>
